@@ -2,12 +2,14 @@
 
 namespace api\modules\v1\controllers;
 
+use api\modules\v1\models\Subcategory;
 use common\models\CorsAuthBehaviors;
+use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 
-class CategoryController extends ActiveController
+class SubcategoryController extends ActiveController
 {
-    public $modelClass = 'api\modules\v1\models\Category';
+    public $modelClass = 'api\modules\v1\models\Subcategory';
 
     public $serializer = [
         'class' => 'yii\rest\Serializer',
@@ -21,7 +23,7 @@ class CategoryController extends ActiveController
         $behaviors = CorsAuthBehaviors::getCorsAuthSettings($behaviors);
 
         $behaviors['authenticator']['only'] = [
-            'index', 'view'
+            'index',
         ];
         return $behaviors;
     }
@@ -30,9 +32,16 @@ class CategoryController extends ActiveController
     {
         $actions = parent::actions();
 
-//        // отключить действия "create"
-//        unset($actions['index']);
+        // отключить действия "index"
+        unset($actions['index']);
 
         return $actions;
+    }
+
+    public function actionIndex($category_id)
+    {
+        return new ActiveDataProvider([
+            'query' => Subcategory::find()->where(['category_id' => $category_id])
+        ]);
     }
 }

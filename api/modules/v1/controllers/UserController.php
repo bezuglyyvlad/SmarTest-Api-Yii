@@ -4,6 +4,7 @@
 namespace api\modules\v1\controllers;
 
 use api\modules\v1\models\AccessToken;
+use common\models\CorsAuthBehaviors;
 use common\models\LoginForm;
 use common\models\UserForm;
 use common\models\UpdateUserForm;
@@ -24,28 +25,7 @@ class UserController extends ActiveController
     {
         $behaviors = parent::behaviors();
 
-
-        // add CORS filter
-        $behaviors['corsFilter'] = [
-            'class' => \yii\filters\Cors::className(),
-            'cors' => [
-                'Origin' => ['http://localhost:3000', 'http://192.168.13.3:3000'],
-                'Access-Control-Allow-Credentials' => true,
-                'Access-Control-Request-Method' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
-            ],
-        ];
-
-        // remove authentication filter
-        $auth = $behaviors['authenticator'];
-        unset($behaviors['authenticator']);
-
-        // re-add authentication filter
-        $behaviors['authenticator'] = $auth;
-
-
-        $behaviors['authenticator'] = [
-            'class' => HttpBearerAuth::className(),
-        ];
+        $behaviors = CorsAuthBehaviors::getCorsAuthSettings($behaviors);
 
         $behaviors['authenticator']['only'] = [
             'index',
@@ -98,7 +78,7 @@ class UserController extends ActiveController
 
     public function actionUpdate($id)
     {
-        if (Yii::$app->user->getId() !== $this->id) {
+        if (Yii::$app->user->getId() !== (int)$id) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
         $model = new UserForm();
