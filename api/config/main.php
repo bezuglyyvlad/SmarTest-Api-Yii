@@ -67,6 +67,15 @@ return [
                 ],
                 [
                     'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/test'],
+                    'extraPatterns' => [
+                        'POST question' => 'question',
+
+                        'OPTIONS question' => 'options',
+                    ],
+                ],
+                [
+                    'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/user'],
                     'extraPatterns' => [
                         'POST login' => 'login',
