@@ -69,9 +69,9 @@ return [
                     'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/test'],
                     'extraPatterns' => [
-                        'POST question' => 'question',
+                        'POST nextQuestion' => 'next-question',
 
-                        'OPTIONS question' => 'options',
+                        'OPTIONS nextQuestion' => 'options',
                     ],
                 ],
                 [
