@@ -96,6 +96,6 @@ class Test extends \yii\db\ActiveRecord
 
     public function fields()
     {
-        return ['test_id', 'time', 'count_of_question', 'category_name', 'subcategory_name', 'date_finish', 'subcategory_id'];
+        return ['test_id', 'count_of_question', 'category_name', 'subcategory_name', 'date_finish', 'subcategory_id'];
     }
 }

@@ -15,6 +15,7 @@ use DateTimeZone;
 use Yii;
 use yii\rest\ActiveController;
 use yii\web\ForbiddenHttpException;
+use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
 
 class TestController extends ActiveController
@@ -48,8 +49,10 @@ class TestController extends ActiveController
     private function checkAccessForView($id)
     {
         $test = Test::findOne(['test_id' => $id, 'user_id' => Yii::$app->user->getId()]);
-        $dateFormat = 'Y-m-d H:i:s';
-        $currentDate = new DateTime(null, new DateTimeZone(Yii::$app->timeZone));
+        //если теста нет
+        if (!$test) throw new NotFoundHttpException();
+        $dateFormat = DateTime::ISO8601;
+        $currentDate = new DateTime();
         $dateFinish = DateTime::createFromFormat($dateFormat, $test->date_finish);
         $timeIsOver = $dateFinish <= $currentDate;
         $lastQuestion = TestQuestion::find()->where(['test_id' => $id])->orderBy(['number_question' => SORT_DESC])
@@ -59,8 +62,8 @@ class TestController extends ActiveController
             $last_answer = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id,
                 'is_user_answer' => !null]);
         };
-        //если теста нет или время вышло или есть ответ на последний вопрос (действительно последний)
-        if (!$test || $timeIsOver || $isRealLastQuestion && $last_answer) {
+        // если время вышло или есть ответ на последний вопрос (действительно последний)
+        if ($timeIsOver || $isRealLastQuestion && $last_answer) {
             throw new ForbiddenHttpException();
         }
     }
@@ -144,8 +147,8 @@ class TestController extends ActiveController
     {
         $model = new Test();
         if ($model->load(Yii::$app->request->post(), '') && $model->validate('subcategory_id')) {
-            $currentDate = new DateTime(null, new DateTimeZone(Yii::$app->timeZone));
-            $dateFormat = 'Y-m-d H:i:s';
+            $currentDate = new DateTime();
+            $dateFormat = DateTime::ISO8601;
             $subcategory = Subcategory::findOne(['subcategory_id' => $model->subcategory_id]);
             $model->category_name = Category::findOne(['category_id' => $subcategory->category_id])->name;
             $model->subcategory_name = $subcategory->name;
