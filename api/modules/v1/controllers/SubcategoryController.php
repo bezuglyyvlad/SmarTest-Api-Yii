@@ -41,7 +41,7 @@ class SubcategoryController extends ActiveController
     public function actionIndex($category_id)
     {
         return new ActiveDataProvider([
-            'query' => Subcategory::find()->where(['category_id' => $category_id])
+            'query' => Subcategory::find()->where(['category_id' => $category_id, 'is_open' => 1])
         ]);
     }
 }

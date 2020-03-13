@@ -46,7 +46,8 @@ class Test extends \yii\db\ActiveRecord
             [['score'], 'number'],
             [['category_name', 'subcategory_name'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
-            [['subcategory_id'], 'exist', 'skipOnError' => true, 'targetClass' => Subcategory::className(), 'targetAttribute' => ['subcategory_id' => 'subcategory_id']],
+            [['subcategory_id'], 'exist', 'skipOnError' => true, 'targetClass' => Subcategory::className(),
+                'targetAttribute' => ['subcategory_id' => 'subcategory_id'], 'filter' => ['is_open' => 1]],
         ];
     }
 

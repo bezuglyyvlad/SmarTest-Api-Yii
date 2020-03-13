@@ -46,24 +46,30 @@ class TestController extends ActiveController
         return $actions;
     }
 
+    public static function testIsFinished($testModel)
+    {
+        $dateFormat = DateTime::ISO8601;
+        $currentDate = new DateTime();
+        $dateFinish = DateTime::createFromFormat($dateFormat, $testModel->date_finish);
+        $timeIsOver = $dateFinish <= $currentDate;
+        $lastQuestion = TestQuestion::find()->where(['test_id' => $testModel->test_id])->orderBy(['number_question' => SORT_DESC])
+            ->one();
+        if ($lastQuestion) {
+            $isRealLastQuestion = $testModel->count_of_question == $lastQuestion->number_question;
+            $last_answer = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id,
+                'is_user_answer' => !null]);
+        };
+        // если время вышло или есть ответ на последний вопрос (действительно последний)
+        return $timeIsOver || $isRealLastQuestion && $last_answer;
+    }
+
     private function checkAccessForView($id)
     {
         $test = Test::findOne(['test_id' => $id, 'user_id' => Yii::$app->user->getId()]);
         //если теста нет
         if (!$test) throw new NotFoundHttpException();
-        $dateFormat = DateTime::ISO8601;
-        $currentDate = new DateTime();
-        $dateFinish = DateTime::createFromFormat($dateFormat, $test->date_finish);
-        $timeIsOver = $dateFinish <= $currentDate;
-        $lastQuestion = TestQuestion::find()->where(['test_id' => $id])->orderBy(['number_question' => SORT_DESC])
-            ->one();
-        if ($lastQuestion) {
-            $isRealLastQuestion = $test->count_of_question == $lastQuestion->number_question;
-            $last_answer = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id,
-                'is_user_answer' => !null]);
-        };
-        // если время вышло или есть ответ на последний вопрос (действительно последний)
-        if ($timeIsOver || $isRealLastQuestion && $last_answer) {
+        $testIsFinished = $this->testIsFinished($test);
+        if ($testIsFinished) {
             throw new ForbiddenHttpException();
         }
     }
@@ -116,7 +122,7 @@ class TestController extends ActiveController
     public function actionNextQuestion()
     {
         $testQuestion = new TestQuestion();
-        if ($testQuestion->load(Yii::$app->request->post(), '') && $testQuestion->validate(['test_id'])) {
+        if ($testQuestion->load(Yii::$app->request->post(), '') && $testQuestion->validate('test_id')) {
             $numberNextQuestion = count(TestQuestion::findAll(['test_id' => $testQuestion->test_id])) + 1;
             $this->checkAccessForQuestion($testQuestion->test_id, $numberNextQuestion);
             $test = Test::findOne(['test_id' => $testQuestion->test_id]);
@@ -128,11 +134,12 @@ class TestController extends ActiveController
             }
 
             $testQuestion = $this->saveQuestion($testQuestion, $question, $numberNextQuestion);
+            return ['question' => $testQuestion,
+                'answers' => TestAnswer::findAll(['test_question_id' => $testQuestion->test_question_id])];
         } elseif (!$testQuestion->hasErrors()) {
             throw new ServerErrorHttpException('Failed to generate new question.');
         }
-        return ['question' => $testQuestion,
-            'answers' => TestAnswer::findAll(['test_question_id' => $testQuestion->test_question_id])];
+        return $testQuestion;
     }
 
     //защитать последний вопрос
@@ -141,12 +148,35 @@ class TestController extends ActiveController
         return 'Result';
     }
 
-    //нет проверки на то, что тест еще не закончен и его можно продолжить
-    //сделать проверку есть ли вопросы в подкатегории и достаточно ли их
+
+    private function createFirstQuestion($test_id, $subcategory_id)
+    {
+        $testQuestion = new TestQuestion();
+        $testQuestion->test_id = $test_id;
+        $question = Question::find()->where(['subcategory_id' => $subcategory_id, 'lvl' => 2])
+            ->orderBy('RAND()')->one();
+        $testQuestion = $this->saveQuestion($testQuestion, $question, 1);
+        return $testQuestion;
+    }
+
+    private function checkAccessForCreate($subcategory_id)
+    {
+        $test = Test::find()->where(['subcategory_id' => $subcategory_id, 'user_id' => Yii::$app->user->getId()])
+            ->orderBy(['test_id' => SORT_DESC])->one();
+        $testIsFinished = $test ? $this->testIsFinished($test) : false;
+
+        //достаточно ли вопросов для прохождения теста
+
+        if ($test && !$testIsFinished) {
+            throw new ForbiddenHttpException();
+        }
+    }
+
     public function actionCreate()
     {
         $model = new Test();
         if ($model->load(Yii::$app->request->post(), '') && $model->validate('subcategory_id')) {
+            $this->checkAccessForCreate($model->subcategory_id);
             $currentDate = new DateTime();
             $dateFormat = DateTime::ISO8601;
             $subcategory = Subcategory::findOne(['subcategory_id' => $model->subcategory_id]);
@@ -160,10 +190,12 @@ class TestController extends ActiveController
             if ($model->save()) {
                 $response = Yii::$app->getResponse();
                 $response->setStatusCode(201);
+                $question = $this->createFirstQuestion($model->test_id, $model->subcategory_id);
+                $answers = TestAnswer::findAll(['test_question_id' => $question->test_question_id]);
             }
         } elseif (!$model->hasErrors()) {
             throw new ServerErrorHttpException('Failed to start new test.');
         }
-        return $model;
+        return ['test' => $model, 'question' => $question, 'answers' => $answers];
     }
 }
