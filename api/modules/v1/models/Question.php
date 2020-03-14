@@ -11,6 +11,7 @@ use Yii;
  * @property string $text
  * @property int $lvl
  * @property int $type
+ * @property string $description
  * @property int $subcategory_id
  *
  * @property Answer[] $answers
@@ -18,6 +19,9 @@ use Yii;
  */
 class Question extends \yii\db\ActiveRecord
 {
+    const NUMBER_OF_TYPES = 1;
+    const COUNT_OF_LVL = 3;
+    const TYPE_WITH_ONE_ANSWER = [1];
     /**
      * {@inheritdoc}
      */
@@ -32,8 +36,8 @@ class Question extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['text', 'lvl', 'type', 'subcategory_id'], 'required'],
-            [['text'], 'string'],
+            [['text', 'lvl', 'type', 'description', 'subcategory_id'], 'required'],
+            [['text', 'description'], 'string'],
             [['lvl', 'type', 'subcategory_id'], 'integer'],
             [['subcategory_id'], 'exist', 'skipOnError' => true, 'targetClass' => Subcategory::className(), 'targetAttribute' => ['subcategory_id' => 'subcategory_id']],
         ];
@@ -49,6 +53,7 @@ class Question extends \yii\db\ActiveRecord
             'text' => 'Text',
             'lvl' => 'Lvl',
             'type' => 'Type',
+            'description' => 'Description',
             'subcategory_id' => 'Subcategory ID',
         ];
     }

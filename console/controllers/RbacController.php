@@ -14,6 +14,10 @@ class RbacController extends Controller
         $admin = $auth->createRole('admin');
         $admin->description = 'Admin';
         $auth->add($admin);
+
+        $expert = $auth->createRole('expert');
+        $expert->description = 'Expert';
+        $auth->add($expert);
     }
 
     public function actionAdmin()
@@ -21,5 +25,12 @@ class RbacController extends Controller
         $auth = Yii::$app->authManager;
         $admin = $auth->getRole('admin');
         $auth->assign($admin, 1);
+    }
+
+    public static function actionExpert($user_id)
+    {
+        $auth = Yii::$app->authManager;
+        $expert = $auth->getRole('expert');
+        $auth->assign($expert, 2);
     }
 }

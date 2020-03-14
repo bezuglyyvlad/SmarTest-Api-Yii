@@ -11,6 +11,7 @@ use Yii;
  * @property string $text
  * @property int $lvl
  * @property int $type
+ * @property string $description
  * @property int $number_question
  * @property int $test_id
  *
@@ -33,10 +34,11 @@ class TestQuestion extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['text', 'lvl', 'type', 'number_question', 'test_id'], 'required'],
-            [['text'], 'string'],
+            [['text', 'lvl', 'type', 'description', 'number_question', 'test_id'], 'required'],
+            [['text', 'description'], 'string'],
             [['lvl', 'type', 'number_question', 'test_id'], 'integer'],
-            [['test_id'], 'exist', 'skipOnError' => true, 'targetClass' => Test::className(), 'targetAttribute' => ['test_id' => 'test_id']],
+            [['test_id'], 'exist', 'skipOnError' => true, 'targetClass' => Test::className(),
+                'targetAttribute' => ['test_id' => 'test_id'], 'filter' => ['user_id' => Yii::$app->user->getId()]],
         ];
     }
 
@@ -50,6 +52,7 @@ class TestQuestion extends \yii\db\ActiveRecord
             'text' => 'Text',
             'lvl' => 'Lvl',
             'type' => 'Type',
+            'description' => 'Description',
             'number_question' => 'Number Question',
             'test_id' => 'Test ID',
         ];

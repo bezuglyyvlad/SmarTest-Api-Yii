@@ -11,7 +11,6 @@ use api\modules\v1\models\TestAnswer;
 use api\modules\v1\models\TestQuestion;
 use common\models\CorsAuthBehaviors;
 use DateTime;
-use DateTimeZone;
 use Yii;
 use yii\rest\ActiveController;
 use yii\web\ForbiddenHttpException;
@@ -74,7 +73,6 @@ class TestController extends ActiveController
         }
     }
 
-    //может не быть вообще вопросов
     public function actionView($id)
     {
         $this->checkAccessForView($id);
@@ -86,21 +84,13 @@ class TestController extends ActiveController
         return ['test' => $test, 'question' => $question, 'answers' => $answers];
     }
 
-    private function checkAccessForQuestion($id, $numberNextQuestion)
-    {
-        $test = Test::findOne(['test_id' => $id, 'user_id' => Yii::$app->user->getId()]);
-        //если теста нет или нужен вопрос выходящий за пределы
-        if (!$test || $numberNextQuestion > $test->count_of_question) {
-            throw new ForbiddenHttpException();
-        }
-    }
-
 
     private function saveQuestion($testQuestion, $question, $number_question)
     {
         $testQuestion->text = $question->text;
         $testQuestion->lvl = $question->lvl;
         $testQuestion->type = $question->type;
+        $testQuestion->description = $question->description;
         $testQuestion->number_question = $number_question;
         if ($testQuestion->save()) {
             $answers = Answer::findAll(['question_id' => $question->question_id]);
@@ -116,6 +106,40 @@ class TestController extends ActiveController
         }
     }
 
+    private function checkUserAnswer($answer, $userAnswer)
+    {
+        if ($answer->text == $userAnswer) {
+            $answer->is_user_answer = 1;
+            $answer->save();
+        }
+    }
+
+    private function saveUserAnswer($answers, $userAnswer, $type)
+    {
+        foreach ($answers as $item) {
+            if (in_array($type, Question::TYPE_WITH_ONE_ANSWER)) {
+                $this->checkUserAnswer($item, $userAnswer);
+            } else {
+                foreach ($userAnswer as $answer) {
+                    $this->checkUserAnswer($item, $answer);
+                }
+            }
+        }
+    }
+
+    //переделать
+    private function checkAccessForQuestion($id, $userAnswer, $type)
+    {
+        $test = Test::findOne(['test_id' => $id, 'user_id' => Yii::$app->user->getId()]);
+        $incorrectAnswer = false;
+        if ($userAnswer) {
+            if ($type == 1 && !is_string($userAnswer)) $incorrectAnswer = true;
+        }
+        if (self::testIsFinished($test) || $incorrectAnswer) {
+            throw new ForbiddenHttpException();
+        }
+    }
+
     //проверять как-то ответы (мб создать другой клас для приема данных)
     //защитать предидущий ответ
     //поменять очки и количество правильных ответов у теста
@@ -123,33 +147,36 @@ class TestController extends ActiveController
     {
         $testQuestion = new TestQuestion();
         if ($testQuestion->load(Yii::$app->request->post(), '') && $testQuestion->validate('test_id')) {
-            $numberNextQuestion = count(TestQuestion::findAll(['test_id' => $testQuestion->test_id])) + 1;
-            $this->checkAccessForQuestion($testQuestion->test_id, $numberNextQuestion);
-            $test = Test::findOne(['test_id' => $testQuestion->test_id]);
-            if ($numberNextQuestion == 1) {
-                $question = Question::find()->where(['subcategory_id' => $test->subcategory_id, 'lvl' => 2])
-                    ->orderBy('RAND()')->one();
-            } else {
-                //подбираем новый вопрос по нужному алгоритму (проверка был ли такой вопрос уже в тесте)
-            }
+            $test_id = $testQuestion->test_id;
+            $post = Yii::$app->request->post();
+            $userAnswer = array_key_exists('answer', $post) ? $post['answer'] : null;
+            $lastQuestion = TestQuestion::find()->where(['test_id' => $test_id])->orderBy(['number_question' => SORT_DESC])
+                ->one();
+            $this->checkAccessForQuestion($test_id, $userAnswer, $lastQuestion->type);
+            $answers = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id]);
+            $this->saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
+            //если требуеться не выходящий за пределы вопрос
+            //подбираем новый вопрос по нужному алгоритму (проверка был ли такой вопрос уже в тесте)
 
-            $testQuestion = $this->saveQuestion($testQuestion, $question, $numberNextQuestion);
-            return ['question' => $testQuestion,
-                'answers' => TestAnswer::findAll(['test_question_id' => $testQuestion->test_question_id])];
+            //$testQuestion = $this->saveQuestion($testQuestion, $question, $numberNextQuestion);
+//            return ['question' => $testQuestion,
+//                'answers' => TestAnswer::findAll(['test_question_id' => $testQuestion->test_question_id])];
         } elseif (!$testQuestion->hasErrors()) {
             throw new ServerErrorHttpException('Failed to generate new question.');
         }
+
         return $testQuestion;
     }
 
-    //защитать последний вопрос
-    public function actionResult()
+    public
+    function actionResult()
     {
         return 'Result';
     }
 
 
-    private function createFirstQuestion($test_id, $subcategory_id)
+    private
+    function createFirstQuestion($test_id, $subcategory_id)
     {
         $testQuestion = new TestQuestion();
         $testQuestion->test_id = $test_id;
@@ -159,20 +186,22 @@ class TestController extends ActiveController
         return $testQuestion;
     }
 
-    private function checkAccessForCreate($subcategory_id)
+    private
+    function checkAccessForCreate($subcategory_id)
     {
         $test = Test::find()->where(['subcategory_id' => $subcategory_id, 'user_id' => Yii::$app->user->getId()])
             ->orderBy(['test_id' => SORT_DESC])->one();
         $testIsFinished = $test ? $this->testIsFinished($test) : false;
-
-        //достаточно ли вопросов для прохождения теста
-
-        if ($test && !$testIsFinished) {
+        $enoughQuestions = Question::find()->where(['subcategory_id' => $subcategory_id,
+                'lvl' => range(1, Question::COUNT_OF_LVL)])->groupBy('lvl')->count() === '3';
+        //тест есть и он не закончен и вопросов недостаточно (не все сложности) для теста
+        if ($test && !$testIsFinished || !$enoughQuestions) {
             throw new ForbiddenHttpException();
         }
     }
 
-    public function actionCreate()
+    public
+    function actionCreate()
     {
         $model = new Test();
         if ($model->load(Yii::$app->request->post(), '') && $model->validate('subcategory_id')) {

@@ -7,11 +7,9 @@ use api\modules\v1\models\AccessToken;
 use common\models\CorsAuthBehaviors;
 use common\models\LoginForm;
 use common\models\UserForm;
-use common\models\UpdateUserForm;
 use common\models\User;
+use console\controllers\RbacController;
 use Yii;
-use yii\filters\auth\HttpBearerAuth;
-use yii\filters\Cors;
 use yii\rest\ActiveController;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
@@ -59,7 +57,8 @@ class UserController extends ActiveController
 
     public function actionIndex()
     {
-        return Yii::$app->user->identity;
+        return ['user' => Yii::$app->user->identity,
+            'role' => Yii::$app->authManager->getRolesByUser(Yii::$app->user->getId())];
     }
 
     public function actionCreate()
