@@ -10,7 +10,7 @@ use Yii;
  * @property int $test_answer_id
  * @property string $text
  * @property int $is_right
- * @property int|null $is_user_answer
+ * @property int $is_user_answer
  * @property int $test_question_id
  *
  * @property TestQuestion $testQuestion

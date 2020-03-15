@@ -12,7 +12,7 @@ use yii\db\ActiveRecord;
  * @property int $subcategory_id
  * @property string $name
  * @property int $time
- * @property int $count_of_question
+ * @property int $count_of_questions
  * @property int $is_open
  * @property int $category_id
  *
@@ -36,8 +36,8 @@ class Subcategory extends ActiveRecord
     public function rules()
     {
         return [
-            [['name', 'count_of_question', 'category_id'], 'required'],
-            [['time', 'count_of_question', 'is_open', 'category_id'], 'integer'],
+            [['name', 'count_of_questions', 'category_id'], 'required'],
+            [['time', 'count_of_questions', 'is_open', 'category_id'], 'integer'],
             [['name'], 'string', 'max' => 255],
             [['category_id'], 'exist', 'skipOnError' => true, 'targetClass' => Category::className(), 'targetAttribute' => ['category_id' => 'category_id']],
         ];
@@ -52,7 +52,7 @@ class Subcategory extends ActiveRecord
             'subcategory_id' => 'Subcategory ID',
             'name' => 'Name',
             'time' => 'Time',
-            'count_of_question' => 'Count Of Question',
+            'count_of_questions' => 'Count Of Question',
             'is_open' => 'Is Open',
             'category_id' => 'Category ID',
         ];
