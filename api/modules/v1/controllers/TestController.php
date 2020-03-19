@@ -59,7 +59,7 @@ class TestController extends ActiveController
                 'is_user_answer' => !null]);
         };
         // если время вышло или есть ответ на последний вопрос (действительно последний)
-        return $timeIsOver || $isRealLastQuestion && $last_answer;
+        return $timeIsOver || $lastQuestion && $isRealLastQuestion && $last_answer;
     }
 
     private function checkAccessForView($id)
@@ -117,10 +117,13 @@ class TestController extends ActiveController
 
     private function saveUserAnswer($answers, $userAnswer, $type)
     {
-        foreach ($answers as $item) {
-            if (in_array($type, Question::TYPE_WITH_ONE_ANSWER)) {
+        if (in_array($type, Question::TYPE_WITH_ONE_ANSWER)) {
+            foreach ($answers as $item) {
                 $this->checkUserAnswer($item, $userAnswer);
-            } else {
+            }
+        } else {
+            $userAnswer = array_keys($userAnswer, true);
+            foreach ($answers as $item) {
                 foreach ($userAnswer as $answer) {
                     $this->checkUserAnswer($item, $answer);
                 }
@@ -189,7 +192,7 @@ class TestController extends ActiveController
                 ->one();
             $this->checkAccessForQuestion($test, $userAnswer, $lastQuestion->type);
             $answers = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id]);
-            $this->saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
+            return $this->saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
             $this->updateTestStatistics($test, $answers, $lastQuestion);
             $numberNextQuestion = $lastQuestion->number_question + 1;
             //если требуеться не выходящий за пределы вопрос
