@@ -77,4 +77,9 @@ class TestQuestion extends \yii\db\ActiveRecord
     {
         return $this->hasOne(Test::className(), ['test_id' => 'test_id']);
     }
+
+    public function extraFields()
+    {
+        return ['testAnswer'];
+    }
 }

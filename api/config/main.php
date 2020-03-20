@@ -70,8 +70,10 @@ return [
                     'controller' => ['v1/test'],
                     'extraPatterns' => [
                         'POST nextQuestion' => 'next-question',
-
                         'OPTIONS nextQuestion' => 'options',
+
+                        'GET result' => 'result',
+                        'OPTIONS result' => 'options',
                     ],
                 ],
                 [

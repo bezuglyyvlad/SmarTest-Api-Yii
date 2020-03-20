@@ -59,9 +59,4 @@ class TestAnswer extends \yii\db\ActiveRecord
     {
         return $this->hasOne(TestQuestion::className(), ['test_question_id' => 'test_question_id']);
     }
-
-    public function fields()
-    {
-        return ['text'];
-    }
 }

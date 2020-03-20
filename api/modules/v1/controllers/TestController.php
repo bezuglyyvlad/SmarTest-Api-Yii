@@ -30,7 +30,8 @@ class TestController extends ActiveController
         $behaviors['authenticator']['only'] = [
             'create',
             'view',
-            'next-question'
+            'next-question',
+            'result'
         ];
         return $behaviors;
     }
@@ -80,7 +81,7 @@ class TestController extends ActiveController
         $test = Test::findOne($condition);
         $question = TestQuestion::find()->where($condition)->orderBy(['number_question' => SORT_DESC])
             ->one();
-        $answers = TestAnswer::findAll(['test_question_id' => $question->test_question_id]);
+        $answers = TestAnswer::find()->select('text')->where(['test_question_id' => $question->test_question_id])->all();
         return ['test' => $test, 'question' => $question, 'answers' => $answers];
     }
 
@@ -154,6 +155,11 @@ class TestController extends ActiveController
         $score = $test->score + $calcPoints > 100 ? 100 : $test->score + $calcPoints;
         $test->count_of_right_answers += $isRightAnswer;
         $test->score = $score;
+        if ($test->count_of_questions === $lastQuestion) {
+            $currentDate = new DateTime();
+            $dateFormat = DateTime::ISO8601;
+            $test->date_finish = $currentDate->format($dateFormat);
+        }
         $test->save();
         $lastQuestion->right_answer = $isRightAnswer;
         $lastQuestion->save();
@@ -192,7 +198,7 @@ class TestController extends ActiveController
                 ->one();
             $this->checkAccessForQuestion($test, $userAnswer, $lastQuestion->type);
             $answers = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id]);
-            return $this->saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
+            $this->saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
             $this->updateTestStatistics($test, $answers, $lastQuestion);
             $numberNextQuestion = $lastQuestion->number_question + 1;
             //если требуеться не выходящий за пределы вопрос
@@ -208,7 +214,7 @@ class TestController extends ActiveController
                 $question = $this->generateNewQuestion($newLvl, $test->subcategory_id, $test_id);
                 $testQuestion = $this->saveQuestion($testQuestion, $question, $numberNextQuestion);
                 return ['question' => $testQuestion,
-                    'answers' => TestAnswer::findAll(['test_question_id' => $testQuestion->test_question_id])];
+                    'answers' => TestAnswer::find()->select('text')->where(['test_question_id' => $testQuestion->test_question_id])->all()];
             }
             return [];
         } elseif (!$testQuestion->hasErrors()) {
@@ -218,9 +224,24 @@ class TestController extends ActiveController
         return $testQuestion;
     }
 
-    public function actionResult()
+    private function checkAccessForResult($test)
     {
-        return 'Result';
+        if (!$test) throw new NotFoundHttpException();
+        $testIsFinished = $this->testIsFinished($test);
+        if (!$testIsFinished) {
+            throw new ForbiddenHttpException();
+        }
+    }
+
+    public function actionResult($test_id)
+    {
+        $test = Test::findOne(['test_id' => $test_id, 'user_id' => Yii::$app->user->getId()]);
+        $this->checkAccessForResult($test);
+        $questions = TestQuestion::find()->where(['test_id' => $test_id])->asArray()->all();
+        foreach ($questions as &$item) {
+            $item['answers'] = TestAnswer::findAll(['test_question_id' => $item['test_question_id']]);
+        }
+        return ['test' => $test, 'questions' => $questions];
     }
 
 
@@ -266,7 +287,7 @@ class TestController extends ActiveController
                 $response = Yii::$app->getResponse();
                 $response->setStatusCode(201);
                 $question = $this->createFirstQuestion($model->test_id, $model->subcategory_id);
-                $answers = TestAnswer::findAll(['test_question_id' => $question->test_question_id]);
+                $answers = TestAnswer::find()->select('text')->where(['test_question_id' => $question->test_question_id])->all();
             }
         } elseif (!$model->hasErrors()) {
             throw new ServerErrorHttpException('Failed to start new test.');
