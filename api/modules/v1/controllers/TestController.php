@@ -2,24 +2,27 @@
 
 namespace api\modules\v1\controllers;
 
-use api\modules\v1\models\Answer;
 use api\modules\v1\models\Category;
-use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
 use api\modules\v1\models\Test;
 use api\modules\v1\models\TestAnswer;
 use api\modules\v1\models\TestQuestion;
 use common\models\CorsAuthBehaviors;
+use common\models\TestHelper;
 use DateTime;
 use Yii;
+use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
-use yii\web\ForbiddenHttpException;
-use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
 
 class TestController extends ActiveController
 {
     public $modelClass = 'api\modules\v1\models\Test';
+
+    public $serializer = [
+        'class' => 'yii\rest\Serializer',
+        'collectionEnvelope' => 'items',
+    ];
 
     public function behaviors()
     {
@@ -31,7 +34,9 @@ class TestController extends ActiveController
             'create',
             'view',
             'next-question',
-            'result'
+            'result',
+            'index',
+            'rating'
         ];
         return $behaviors;
     }
@@ -41,42 +46,55 @@ class TestController extends ActiveController
         $actions = parent::actions();
 
         // отключить действия "create"
-        unset($actions['create'], $actions['view']);
+        unset($actions['create'], $actions['view'], $actions['index']);
 
         return $actions;
     }
 
-    public static function testIsFinished($testModel)
+    public function actionIndex()
     {
-        $dateFormat = DateTime::ISO8601;
-        $currentDate = new DateTime();
-        $dateFinish = DateTime::createFromFormat($dateFormat, $testModel->date_finish);
-        $timeIsOver = $dateFinish <= $currentDate;
-        $lastQuestion = TestQuestion::find()->where(['test_id' => $testModel->test_id])->orderBy(['number_question' => SORT_DESC])
-            ->one();
-        if ($lastQuestion) {
-            $isRealLastQuestion = $testModel->count_of_questions == $lastQuestion->number_question;
-            $last_answer = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id,
-                'is_user_answer' => !null]);
-        };
-        // если время вышло или есть ответ на последний вопрос (действительно последний)
-        return $timeIsOver || $lastQuestion && $isRealLastQuestion && $last_answer;
+        $testIds = TestHelper::getUserTestIds();
+        return new ActiveDataProvider([
+            'query' => Test::find()->where(['test_id' => $testIds])->orderBy(['test_id' => SORT_DESC]),
+        ]);
     }
 
-    private function checkAccessForView($id)
+    public function actionRating()
     {
-        $test = Test::findOne(['test_id' => $id, 'user_id' => Yii::$app->user->getId()]);
-        //если теста нет
-        if (!$test) throw new NotFoundHttpException();
-        $testIsFinished = $this->testIsFinished($test);
-        if ($testIsFinished) {
-            throw new ForbiddenHttpException();
+        $testIds = TestHelper::getUserTestIds();
+        $query = Test::find()->where(['test_id' => $testIds])->andWhere(['not', ['subcategory_id' => null]]);
+        $tests = $query->all();
+        //rating by category
+        $categories = Category::find()->select(['category_id', 'name'])->asArray()->all();
+        foreach ($categories as &$item) {
+            $subcategoryIds = Subcategory::find()->where(['category_id' => $item['category_id']])->column();
+            $score = $query->select(['score' => 'avg(score)'])->where(['subcategory_id' => $subcategoryIds])->column();
+            $item['score'] = array_shift($score);
         }
+        $ratingByCategory = array_filter($categories, function ($i) {
+            return $i['score'] != null;
+        });
+        //rating
+        $arrayOfPoints = [];
+        foreach ($ratingByCategory as $i) {
+            $arrayOfPoints[] = $i['score'];
+        }
+        $rating = $arrayOfPoints ? array_sum($arrayOfPoints) / count($arrayOfPoints) : 0;
+        //chartData
+        $chartData = [];
+        foreach ($tests as $i) {
+            $dateFormat = DateTime::ISO8601;
+            $days30ago = (new DateTime())->modify('-30 day');
+            if (DateTime::createFromFormat($dateFormat, $i['date_start']) >= $days30ago) {
+                $chartData[] = $i['score'];
+            }
+        }
+        return ['rating' => $rating, 'ratingByCategory' => $ratingByCategory, 'chartData' => $chartData];
     }
 
     public function actionView($id)
     {
-        $this->checkAccessForView($id);
+        TestHelper::checkAccessForView($id);
         $condition = ['test_id' => $id];
         $test = Test::findOne($condition);
         $question = TestQuestion::find()->where($condition)->orderBy(['number_question' => SORT_DESC])
@@ -85,107 +103,6 @@ class TestController extends ActiveController
         return ['test' => $test, 'question' => $question, 'answers' => $answers];
     }
 
-
-    private function saveQuestion($testQuestion, $question, $number_question)
-    {
-        $testQuestion->text = $question->text;
-        $testQuestion->lvl = $question->lvl;
-        $testQuestion->type = $question->type;
-        $testQuestion->description = $question->description;
-        $testQuestion->question_id = $question->question_id;
-        $testQuestion->number_question = $number_question;
-        if ($testQuestion->save()) {
-            $answers = Answer::findAll(['question_id' => $question->question_id]);
-            shuffle($answers);
-            foreach ($answers as $item) {
-                $testAnswers = new TestAnswer();
-                $testAnswers->text = $item->text;
-                $testAnswers->is_right = $item->is_right;
-                $testAnswers->test_question_id = $testQuestion->test_question_id;
-                $testAnswers->save();
-            }
-            return $testQuestion;
-        }
-    }
-
-    private function checkUserAnswer($answer, $userAnswer)
-    {
-        if ($answer->text == $userAnswer) {
-            $answer->is_user_answer = 1;
-            $answer->save();
-        }
-    }
-
-    private function saveUserAnswer($answers, $userAnswer, $type)
-    {
-        if (in_array($type, Question::TYPE_WITH_ONE_ANSWER)) {
-            foreach ($answers as $item) {
-                $this->checkUserAnswer($item, $userAnswer);
-            }
-        } else {
-            $userAnswer = array_keys($userAnswer, true);
-            foreach ($answers as $item) {
-                foreach ($userAnswer as $answer) {
-                    $this->checkUserAnswer($item, $answer);
-                }
-            }
-        }
-    }
-
-    private function getPoints($answers, $points, $onePoint)
-    {
-        foreach ($answers as $item) {
-            if ($item->is_right == 1 && $item->is_user_answer == 0) $points -= $onePoint;
-            if ($item->is_right == 0 && $item->is_user_answer == 1) {
-                return 0;
-            }
-        }
-        return $points;
-    }
-
-    private function updateTestStatistics($test, $answers, $lastQuestion)
-    {
-        $points = round(100 / $test->count_of_questions, 2);
-        $countIsRights = count(array_filter($answers, function ($a) {
-            return $a->is_right == 1;
-        }));
-        $onePoint = round($points / $countIsRights, 2);
-        $calcPoints = $this->getPoints($answers, $points, $onePoint);
-        $isRightAnswer = $points == $calcPoints;
-        $score = $test->score + $calcPoints > 100 ? 100 : $test->score + $calcPoints;
-        $test->count_of_right_answers += $isRightAnswer;
-        $test->score = $score;
-        if ($test->count_of_questions === $lastQuestion) {
-            $currentDate = new DateTime();
-            $dateFormat = DateTime::ISO8601;
-            $test->date_finish = $currentDate->format($dateFormat);
-        }
-        $test->save();
-        $lastQuestion->right_answer = $isRightAnswer;
-        $lastQuestion->save();
-    }
-
-    private function generateNewQuestion($lvl, $subcategory_id, $test_id)
-    {
-        $questionsArray = Question::findAll(['subcategory_id' => $subcategory_id, 'lvl' => $lvl]);
-        $testQuestionIds = TestQuestion::find()->select('question_id')->where(['test_id' => $test_id])->all();
-        $uniqQuestions = array_udiff($questionsArray, $testQuestionIds, function ($obj1, $obj2) {
-            return $obj1->question_id - $obj2->question_id;
-        });
-        $question = $uniqQuestions ? $uniqQuestions[array_rand($uniqQuestions)] : $questionsArray[array_rand($questionsArray)];
-        return $question;
-    }
-
-    private function checkAccessForQuestion($test, $userAnswer, $type)
-    {
-        $incorrectAnswer = false;
-        if ($type == 1 && !is_string($userAnswer)) $incorrectAnswer = true;
-        if (self::testIsFinished($test) || !$userAnswer || $incorrectAnswer || $test->subcategory_id == null) {
-            throw new ForbiddenHttpException();
-        }
-    }
-
-    //поменять очки и количество правильных ответов у теста
     public function actionNextQuestion()
     {
         $testQuestion = new TestQuestion();
@@ -196,10 +113,10 @@ class TestController extends ActiveController
             $test = Test::findOne(['test_id' => $test_id, 'user_id' => Yii::$app->user->getId()]);
             $lastQuestion = TestQuestion::find()->where(['test_id' => $test_id])->orderBy(['number_question' => SORT_DESC])
                 ->one();
-            $this->checkAccessForQuestion($test, $userAnswer, $lastQuestion->type);
+            TestHelper::checkAccessForQuestion($test, $userAnswer, $lastQuestion->type);
             $answers = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id]);
-            $this->saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
-            $this->updateTestStatistics($test, $answers, $lastQuestion);
+            TestHelper::saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
+            TestHelper::updateTestStatistics($test, $answers, $lastQuestion);
             $numberNextQuestion = $lastQuestion->number_question + 1;
             //если требуеться не выходящий за пределы вопрос
             if ($numberNextQuestion <= $test->count_of_questions) {
@@ -211,8 +128,8 @@ class TestController extends ActiveController
                 } else if ($test->score >= 82) {
                     $newLvl = 3;
                 }
-                $question = $this->generateNewQuestion($newLvl, $test->subcategory_id, $test_id);
-                $testQuestion = $this->saveQuestion($testQuestion, $question, $numberNextQuestion);
+                $question = TestHelper::generateNewQuestion($newLvl, $test->subcategory_id, $test_id);
+                $testQuestion = TestHelper::saveQuestion($testQuestion, $question, $numberNextQuestion);
                 return ['question' => $testQuestion,
                     'answers' => TestAnswer::find()->select('text')->where(['test_question_id' => $testQuestion->test_question_id])->all()];
             }
@@ -224,19 +141,10 @@ class TestController extends ActiveController
         return $testQuestion;
     }
 
-    private function checkAccessForResult($test)
-    {
-        if (!$test) throw new NotFoundHttpException();
-        $testIsFinished = $this->testIsFinished($test);
-        if (!$testIsFinished) {
-            throw new ForbiddenHttpException();
-        }
-    }
-
     public function actionResult($test_id)
     {
         $test = Test::findOne(['test_id' => $test_id, 'user_id' => Yii::$app->user->getId()]);
-        $this->checkAccessForResult($test);
+        TestHelper::checkAccessForResult($test);
         $questions = TestQuestion::find()->where(['test_id' => $test_id])->asArray()->all();
         foreach ($questions as &$item) {
             $item['answers'] = TestAnswer::findAll(['test_question_id' => $item['test_question_id']]);
@@ -244,35 +152,11 @@ class TestController extends ActiveController
         return ['test' => $test, 'questions' => $questions];
     }
 
-
-    private function createFirstQuestion($test_id, $subcategory_id)
-    {
-        $testQuestion = new TestQuestion();
-        $testQuestion->test_id = $test_id;
-        $question = Question::find()->where(['subcategory_id' => $subcategory_id, 'lvl' => 1])
-            ->orderBy('RAND()')->one();
-        $testQuestion = $this->saveQuestion($testQuestion, $question, 1);
-        return $testQuestion;
-    }
-
-    private function checkAccessForCreate($subcategory_id)
-    {
-        $test = Test::find()->where(['subcategory_id' => $subcategory_id, 'user_id' => Yii::$app->user->getId()])
-            ->orderBy(['test_id' => SORT_DESC])->one();
-        $testIsFinished = $test ? $this->testIsFinished($test) : false;
-        $enoughQuestions = Question::find()->where(['subcategory_id' => $subcategory_id,
-                'lvl' => range(1, Question::COUNT_OF_LVL)])->groupBy('lvl')->count() === '3';
-        //тест есть и он не закончен и вопросов недостаточно (не все сложности) для теста
-        if ($test && !$testIsFinished || !$enoughQuestions) {
-            throw new ForbiddenHttpException();
-        }
-    }
-
     public function actionCreate()
     {
         $model = new Test();
         if ($model->load(Yii::$app->request->post(), '') && $model->validate('subcategory_id')) {
-            $this->checkAccessForCreate($model->subcategory_id);
+            TestHelper::checkAccessForCreate($model->subcategory_id);
             $currentDate = new DateTime();
             $dateFormat = DateTime::ISO8601;
             $subcategory = Subcategory::findOne(['subcategory_id' => $model->subcategory_id]);
@@ -286,7 +170,7 @@ class TestController extends ActiveController
             if ($model->save()) {
                 $response = Yii::$app->getResponse();
                 $response->setStatusCode(201);
-                $question = $this->createFirstQuestion($model->test_id, $model->subcategory_id);
+                $question = TestHelper::createFirstQuestion($model->test_id, $model->subcategory_id);
                 $answers = TestAnswer::find()->select('text')->where(['test_question_id' => $question->test_question_id])->all();
             }
         } elseif (!$model->hasErrors()) {

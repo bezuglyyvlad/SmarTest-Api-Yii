@@ -74,6 +74,9 @@ return [
 
                         'GET result' => 'result',
                         'OPTIONS result' => 'options',
+
+                        'GET rating' => 'rating',
+                        'OPTIONS rating' => 'options',
                     ],
                 ],
                 [

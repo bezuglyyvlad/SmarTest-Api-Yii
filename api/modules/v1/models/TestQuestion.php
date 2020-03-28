@@ -14,11 +14,13 @@ use Yii;
  * @property string|null $description
  * @property int $number_question
  * @property int $right_answer
+ * @property float $score
  * @property int $test_id
- * @property int $question_id
+ * @property int|null $question_id
  *
  * @property TestAnswer[] $testAnswers
  * @property Test $test
+ * @property Question $question
  */
 class TestQuestion extends \yii\db\ActiveRecord
 {
@@ -38,9 +40,10 @@ class TestQuestion extends \yii\db\ActiveRecord
         return [
             [['text', 'lvl', 'type', 'number_question', 'test_id'], 'required'],
             [['text', 'description'], 'string'],
-            [['lvl', 'type', 'number_question', 'test_id'], 'integer'],
-            [['test_id'], 'exist', 'skipOnError' => true, 'targetClass' => Test::className(),
-                'targetAttribute' => ['test_id' => 'test_id'], 'filter' => ['user_id' => Yii::$app->user->getId()]],
+            [['lvl', 'type', 'number_question', 'right_answer', 'test_id', 'question_id'], 'integer'],
+            [['score'], 'number'],
+            [['test_id'], 'exist', 'skipOnError' => true, 'targetClass' => Test::className(), 'targetAttribute' => ['test_id' => 'test_id'], 'filter' => ['user_id' => Yii::$app->user->getId()]],
+            [['question_id'], 'exist', 'skipOnError' => true, 'targetClass' => Question::className(), 'targetAttribute' => ['question_id' => 'question_id']],
         ];
     }
 
@@ -57,6 +60,7 @@ class TestQuestion extends \yii\db\ActiveRecord
             'description' => 'Description',
             'number_question' => 'Number Question',
             'right_answer' => 'Right Answer',
+            'score' => 'Score',
             'test_id' => 'Test ID',
             'question_id' => 'Question ID',
         ];
@@ -76,6 +80,14 @@ class TestQuestion extends \yii\db\ActiveRecord
     public function getTest()
     {
         return $this->hasOne(Test::className(), ['test_id' => 'test_id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getQuestion()
+    {
+        return $this->hasOne(Question::className(), ['question_id' => 'question_id']);
     }
 
     public function extraFields()
