@@ -14,12 +14,13 @@ use yii\web\NotFoundHttpException;
 
 class TestHelper
 {
+    //переделать
     public static function getUserTestIds()
     {
         $tests = Test::find()->where(['user_id' => Yii::$app->user->getId()])->all();
         $testIds = [];
         foreach ($tests as $t) {
-            if (!self::testIsFinished($t)) {
+            if (self::testIsFinished($t)) {
                 $testIds[] = $t->test_id;
             }
         }
@@ -78,7 +79,7 @@ class TestHelper
 
     public static function checkUserAnswer($answer, $userAnswer)
     {
-        if ($answer->text == $userAnswer) {
+        if ($answer->test_answer_id == $userAnswer) {
             $answer->is_user_answer = 1;
             $answer->save();
         }
@@ -123,14 +124,14 @@ class TestHelper
         $score = $test->score + $calcPoints > 100 ? 100 : $test->score + $calcPoints;
         $test->count_of_right_answers += $isRightAnswer;
         $test->score = $score;
-        if ($test->count_of_questions === $lastQuestion) {
+        if ($test->count_of_questions === $lastQuestion->number_question) {
             $currentDate = new DateTime();
             $dateFormat = DateTime::ISO8601;
             $test->date_finish = $currentDate->format($dateFormat);
         }
         $test->save();
-        $lastQuestion->right_answer = $isRightAnswer;
-        $lastQuestion->score = $calcPoints;
+        $lastQuestion->right_answer += $isRightAnswer;
+        $lastQuestion->score += $calcPoints;
         $lastQuestion->save();
     }
 

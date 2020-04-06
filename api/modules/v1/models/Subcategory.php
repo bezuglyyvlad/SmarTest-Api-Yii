@@ -3,6 +3,7 @@
 namespace api\modules\v1\models;
 
 use api\modules\v1\controllers\TestController;
+use common\models\TestHelper;
 use Yii;
 use yii\db\ActiveRecord;
 
@@ -81,7 +82,7 @@ class Subcategory extends ActiveRecord
     {
         $test = $this->hasMany(Test::className(), ['subcategory_id' => 'subcategory_id'])
             ->orderBy(['test_id' => SORT_DESC])->one();
-        if ($test && !TestController::testIsFinished($test)) return $test;
+        if ($test && !TestHelper::testIsFinished($test)) return $test;
         return [];
     }
 

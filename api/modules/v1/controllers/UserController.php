@@ -39,8 +39,8 @@ class UserController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия "create"
-        unset($actions['create'], $actions['index'], $actions['update']);
+        // отключить действия
+        unset($actions['create'], $actions['index'], $actions['update'], $actions['view']);
 
         return $actions;
     }
@@ -83,6 +83,8 @@ class UserController extends ActiveController
         $model = new UserForm();
         if ($model->load(Yii::$app->request->getBodyParams(), '')) {
             $model->updateUser($id);
+        } elseif (!$model->hasErrors()) {
+            throw new ServerErrorHttpException('Failed to create user.');
         }
         $model->password = null;
         return $model;

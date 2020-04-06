@@ -14,7 +14,8 @@ class CorsAuthBehaviors
         $behaviors['corsFilter'] = [
             'class' => \yii\filters\Cors::className(),
             'cors' => [
-                'Origin' => ['http://localhost:3000', 'http://192.168.13.3:3000'],
+                'Origin' => ['http://localhost:3000', 'http://192.168.13.3:3000', 'https://smartest.netlify.com',
+                    'http://localhost:5000', 'http://192.168.13.3:5000',],
                 'Access-Control-Allow-Credentials' => true,
                 'Access-Control-Request-Method' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
             ],

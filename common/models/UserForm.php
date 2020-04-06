@@ -5,9 +5,6 @@ namespace common\models;
 use Yii;
 use yii\base\Model;
 
-/**
- * Signup form
- */
 class UserForm extends Model
 {
     public $username;

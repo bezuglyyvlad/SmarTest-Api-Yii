@@ -10,6 +10,7 @@ use Yii;
  *
  * @property int $token_id
  * @property string $access_token
+ * @property string $add_time
  * @property int $user_id
  *
  * @property User $user
@@ -31,6 +32,7 @@ class AccessToken extends \yii\db\ActiveRecord
     {
         return [
             [['access_token', 'user_id'], 'required'],
+            [['add_time'], 'safe'],
             [['user_id'], 'integer'],
             [['access_token'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['user_id' => 'id']],
@@ -45,6 +47,7 @@ class AccessToken extends \yii\db\ActiveRecord
         return [
             'token_id' => 'Token ID',
             'access_token' => 'Access Token',
+            'add_time' => 'Add Time',
             'user_id' => 'User ID',
         ];
     }

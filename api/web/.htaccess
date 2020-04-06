@@ -1,3 +1,6 @@
+Options +FollowSymLinks
+IndexIgnore */*
+
 RewriteEngine on
 # если это папка или файл, открываем его
 RewriteCond %{REQUEST_FILENAME} !-f

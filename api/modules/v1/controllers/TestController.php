@@ -45,8 +45,8 @@ class TestController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия "create"
-        unset($actions['create'], $actions['view'], $actions['index']);
+        // отключить действия
+        unset($actions['create'], $actions['view'], $actions['index'], $actions['update'], $actions['delete']);
 
         return $actions;
     }
@@ -68,8 +68,8 @@ class TestController extends ActiveController
         $categories = Category::find()->select(['category_id', 'name'])->asArray()->all();
         foreach ($categories as &$item) {
             $subcategoryIds = Subcategory::find()->where(['category_id' => $item['category_id']])->column();
-            $score = $query->select(['score' => 'avg(score)'])->where(['subcategory_id' => $subcategoryIds])->column();
-            $item['score'] = array_shift($score);
+            $score = $query->select(['score' => 'avg(score)'])->andWhere(['subcategory_id' => $subcategoryIds])->column();
+            $item['score'] = round(array_shift($score), 2);
         }
         $ratingByCategory = array_filter($categories, function ($i) {
             return $i['score'] != null;
@@ -89,7 +89,7 @@ class TestController extends ActiveController
                 $chartData[] = $i['score'];
             }
         }
-        return ['rating' => $rating, 'ratingByCategory' => $ratingByCategory, 'chartData' => $chartData];
+        return ['rating' => round($rating, 2), 'ratingByCategory' => $ratingByCategory, 'chartData' => $chartData];
     }
 
     public function actionView($id)
@@ -99,7 +99,8 @@ class TestController extends ActiveController
         $test = Test::findOne($condition);
         $question = TestQuestion::find()->where($condition)->orderBy(['number_question' => SORT_DESC])
             ->one();
-        $answers = TestAnswer::find()->select('text')->where(['test_question_id' => $question->test_question_id])->all();
+        unset($question->description);
+        $answers = TestAnswer::find()->select(['test_answer_id', 'text'])->where(['test_question_id' => $question->test_question_id])->all();
         return ['test' => $test, 'question' => $question, 'answers' => $answers];
     }
 
@@ -130,8 +131,9 @@ class TestController extends ActiveController
                 }
                 $question = TestHelper::generateNewQuestion($newLvl, $test->subcategory_id, $test_id);
                 $testQuestion = TestHelper::saveQuestion($testQuestion, $question, $numberNextQuestion);
+                unset($testQuestion->description);
                 return ['question' => $testQuestion,
-                    'answers' => TestAnswer::find()->select('text')->where(['test_question_id' => $testQuestion->test_question_id])->all()];
+                    'answers' => TestAnswer::find()->select(['test_answer_id', 'text'])->where(['test_question_id' => $testQuestion->test_question_id])->all()];
             }
             return [];
         } elseif (!$testQuestion->hasErrors()) {
