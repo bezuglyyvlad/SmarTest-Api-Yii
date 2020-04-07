@@ -4,6 +4,7 @@
 namespace api\modules\v1\controllers;
 
 use api\modules\v1\models\AccessToken;
+use api\modules\v1\models\Category;
 use common\models\CorsAuthBehaviors;
 use common\models\LoginForm;
 use common\models\UserForm;
@@ -13,6 +14,7 @@ use Yii;
 use yii\rest\ActiveController;
 use yii\web\BadRequestHttpException;
 use yii\web\ForbiddenHttpException;
+use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
 
 class UserController extends ActiveController
@@ -55,6 +57,13 @@ class UserController extends ActiveController
         }
     }
 
+    public function myFindModel($id)
+    {
+        if (!User::findOne($id)) {
+            throw new NotFoundHttpException("Object not found: $id");
+        }
+    }
+
     public function actionIndex()
     {
         return ['user' => Yii::$app->user->identity,
@@ -77,6 +86,7 @@ class UserController extends ActiveController
 
     public function actionUpdate($id)
     {
+        $this->myFindModel($id);
         if (Yii::$app->user->getId() !== (int)$id) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }

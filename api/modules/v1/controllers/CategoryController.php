@@ -7,10 +7,12 @@ use api\modules\v1\models\CategoryForm;
 use common\models\CorsAuthBehaviors;
 use common\models\User;
 use common\models\UserForm;
+use console\controllers\RbacController;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 use yii\web\ForbiddenHttpException;
+use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
 
 class CategoryController extends ActiveController
@@ -51,6 +53,13 @@ class CategoryController extends ActiveController
         }
     }
 
+    public function myFindModel($id)
+    {
+        if (!Category::findOne($id)) {
+            throw new NotFoundHttpException("Object not found: $id");
+        }
+    }
+
     public function actionIndex()
     {
         $isAdmin = Yii::$app->user->can('admin');
@@ -60,11 +69,12 @@ class CategoryController extends ActiveController
         ]);
     }
 
-    public function actionView()
+    public function actionView($id)
     {
+        $this->myFindModel($id);
         $isAdmin = Yii::$app->user->can('admin');
-        return $isAdmin ? Category::find()->with('user')->one() :
-            Category::find()->select(['category_id', 'name'])->one();
+        return $isAdmin ? Category::find()->where(['category_id' => $id])->with('user')->one() :
+            Category::find()->select(['category_id', 'name'])->where(['category_id' => $id])->one();
     }
 
     public function actionCreate()
@@ -74,9 +84,7 @@ class CategoryController extends ActiveController
         }
         $model = new CategoryForm();
         if ($model->load(Yii::$app->request->post(), '') && $model->validate()) {
-            $user = User::findOne(['email' => $model->userEmail]);
-            $user_id = $user ? $user->getId() : $user;
-            if ($model->createCategory($user_id)) {
+            if ($model->createCategory()) {
                 $response = Yii::$app->getResponse();
                 $response->setStatusCode(201);
             }
@@ -88,14 +96,14 @@ class CategoryController extends ActiveController
 
     public function actionUpdate($id)
     {
+        $this->myFindModel($id);
         if (!Yii::$app->user->can('admin')) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
         $model = new CategoryForm();
+        $category = new Category();
         if ($model->load(Yii::$app->request->getBodyParams(), '') && $model->validate()) {
-            $user = User::findOne(['email' => $model->userEmail]);
-            $user_id = $user ? $user->getId() : $user;
-            $model->updateCategory($id, $user_id);
+            $model->updateCategory($id);
         } elseif (!$model->hasErrors()) {
             throw new ServerErrorHttpException('Failed to update category.');
         }
