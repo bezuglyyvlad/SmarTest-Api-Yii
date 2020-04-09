@@ -21,7 +21,7 @@ class CategoryForm extends Model
             ['name', 'required'],
             ['name', 'string', 'max' => 255],
             ['name', 'unique', 'targetClass' => Category::className(), 'when' => [$this, 'whenSelfUnique'],
-                'message' => 'Категория с таким именем уже существует.'],
+                'message' => 'Категория с таким названием уже существует.'],
             ['userEmail', 'string', 'max' => 255],
             ['userEmail', 'exist', 'skipOnError' => true, 'targetClass' => User::className(),
                 'targetAttribute' => ['userEmail' => 'email'],

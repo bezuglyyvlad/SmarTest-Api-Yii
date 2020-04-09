@@ -19,10 +19,10 @@ class CategoryController extends ActiveController
 {
     public $modelClass = 'api\modules\v1\models\Category';
 
-    public $serializer = [
-        'class' => 'yii\rest\Serializer',
-        'collectionEnvelope' => 'items',
-    ];
+//    public $serializer = [
+//        'class' => 'yii\rest\Serializer',
+//        'collectionEnvelope' => 'items',
+//    ];
 
     public function behaviors()
     {
@@ -65,7 +65,8 @@ class CategoryController extends ActiveController
         $isAdmin = Yii::$app->user->can('admin');
         $query = $isAdmin ? Category::find()->with('user') : Category::find()->select(['category_id', 'name']);
         return new ActiveDataProvider([
-            'query' => $query
+            'query' => $query,
+            'pagination' => false
         ]);
     }
 
