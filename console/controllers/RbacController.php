@@ -3,7 +3,6 @@
 namespace console\controllers;
 
 use api\modules\v1\models\Category;
-use common\rbac\ManagerRule;
 use Yii;
 use yii\console\Controller;
 
@@ -36,7 +35,7 @@ class RbacController extends Controller
         $auth->add($rule);
     }
 
-    public function actionUpdateOwnProduct()
+    public function actionUpdateOwnCategory()
     {
         $auth = Yii::$app->authManager;
         // добавляем разрешение "updateOwnProduct" и привязываем к нему правило.

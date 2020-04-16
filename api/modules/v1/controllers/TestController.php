@@ -62,18 +62,19 @@ class TestController extends ActiveController
     public function actionRating()
     {
         $testIds = TestHelper::getUserTestIds();
-        $query = Test::find()->where(['test_id' => $testIds])->andWhere(['not', ['subcategory_id' => null]]);
-        $tests = $query->all();
+        $tests = Test::find()->where(['test_id' => $testIds])->andWhere(['not', ['subcategory_id' => null]])->all();
         //rating by category
-        $categories = Category::find()->select(['category_id', 'name'])->asArray()->all();
+        $categories = Category::find()->select(['category_id', 'name'])->asArray()
+            ->orderBy('category_id')->all();
+        $ratingByCategory = [];
         foreach ($categories as &$item) {
             $subcategoryIds = Subcategory::find()->where(['category_id' => $item['category_id']])->column();
-            $score = $query->select(['score' => 'avg(score)'])->andWhere(['subcategory_id' => $subcategoryIds])->column();
+            $score = Test::find()->select(['score' => 'avg(score)'])
+                ->where(['test_id' => $testIds, 'subcategory_id' => $subcategoryIds])
+                ->andWhere(['not', ['subcategory_id' => null]])->column();
             $item['score'] = round(array_shift($score), 2);
+            if ($item['score'] != null) array_push($ratingByCategory, $item);
         }
-        $ratingByCategory = array_filter($categories, function ($i) {
-            return $i['score'] != null;
-        });
         //rating
         $arrayOfPoints = [];
         foreach ($ratingByCategory as $i) {
@@ -100,7 +101,8 @@ class TestController extends ActiveController
         $question = TestQuestion::find()->where($condition)->orderBy(['number_question' => SORT_DESC])
             ->one();
         unset($question->description);
-        $answers = TestAnswer::find()->select(['test_answer_id', 'text'])->where(['test_question_id' => $question->test_question_id])->all();
+        $answers = TestAnswer::find()->select(['test_answer_id', 'text'])
+            ->where(['test_question_id' => $question->test_question_id])->all();
         return ['test' => $test, 'question' => $question, 'answers' => $answers];
     }
 

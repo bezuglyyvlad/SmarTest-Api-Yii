@@ -63,6 +63,10 @@ return [
                 ],
                 [
                     'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/admin'],
+                ],
+                [
+                    'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/subcategory'],
                 ],
                 [

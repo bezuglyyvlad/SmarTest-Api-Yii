@@ -14,7 +14,6 @@ use yii\web\NotFoundHttpException;
 
 class TestHelper
 {
-    //переделать
     public static function getUserTestIds()
     {
         $tests = Test::find()->where(['user_id' => Yii::$app->user->getId()])->all();
