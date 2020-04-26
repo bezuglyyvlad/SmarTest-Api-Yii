@@ -4,12 +4,10 @@
 namespace api\modules\v1\controllers;
 
 use api\modules\v1\models\AccessToken;
-use api\modules\v1\models\Category;
 use common\models\CorsAuthBehaviors;
 use common\models\LoginForm;
-use common\models\UserForm;
+use common\models\SignUpForm;
 use common\models\User;
-use console\controllers\RbacController;
 use Yii;
 use yii\rest\ActiveController;
 use yii\web\BadRequestHttpException;
@@ -72,7 +70,7 @@ class UserController extends ActiveController
 
     public function actionCreate()
     {
-        $model = new UserForm();
+        $model = new SignUpForm();
         if ($model->load(Yii::$app->request->post(), '')) {
             if ($model->signup()) {
                 $response = Yii::$app->getResponse();
@@ -90,7 +88,7 @@ class UserController extends ActiveController
         if (Yii::$app->user->getId() !== (int)$id) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
-        $model = new UserForm();
+        $model = new SignUpForm();
         if ($model->load(Yii::$app->request->getBodyParams(), '')) {
             $model->updateUser($id);
         } elseif (!$model->hasErrors()) {

@@ -38,14 +38,14 @@ class RbacController extends Controller
     public function actionUpdateOwnCategory()
     {
         $auth = Yii::$app->authManager;
-        // добавляем разрешение "updateOwnProduct" и привязываем к нему правило.
+        // добавляем разрешение "updateOwnCategory" и привязываем к нему правило.
         $editOwnCategory = $auth->createPermission('editOwnCategory');
         $editOwnCategory->description = 'Edit own category';
         $rule = $auth->getRule('isExpert');
         $editOwnCategory->ruleName = $rule->name;
         $auth->add($editOwnCategory);
 
-        // разрешаем "автору" обновлять его посты
+        // разрешаем "эксперту" управлять его категорией
         $manager = $auth->getRole('expert');
         $auth->addChild($manager, $editOwnCategory);
     }

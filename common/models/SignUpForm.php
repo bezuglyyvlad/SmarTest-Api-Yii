@@ -20,14 +20,14 @@ class SignUpForm extends Model
         return [
             ['username', 'trim'],
             ['username', 'required'],
-            ['username', 'unique', 'targetClass' => '\common\models\User', 'when' => [$this, 'whenSelfUnique'], 'message' => 'Это имя пользователя уже занято.'],
+            ['username', 'unique', 'targetClass' => '\common\models\User', 'when' => [$this, 'whenSelfUnique'], 'message' => 'Це ім\'я користувача вже зайнято.'],
             ['username', 'string', 'min' => 2, 'max' => 255],
 
             ['email', 'trim'],
             ['email', 'required'],
             ['email', 'email'],
             ['email', 'string', 'max' => 255],
-            ['email', 'unique', 'targetClass' => '\common\models\User', 'when' => [$this, 'whenSelfUnique'], 'message' => 'Этот адрес электронной почты уже занят.'],
+            ['email', 'unique', 'targetClass' => '\common\models\User', 'when' => [$this, 'whenSelfUnique'], 'message' => 'Ця електронна адреса вже зайнята.'],
 
             ['password', 'required'],
             ['password', 'string', 'min' => 6, 'max' => 255],
@@ -56,8 +56,9 @@ class SignUpForm extends Model
 
     }
 
-    public function whenSelfUnique($model, $attribute) {
-        if (Yii::$app->user->identity){
+    public function whenSelfUnique($model, $attribute)
+    {
+        if (Yii::$app->user->identity) {
             return Yii::$app->user->identity->$attribute !== $model->$attribute;
         }
         return true;

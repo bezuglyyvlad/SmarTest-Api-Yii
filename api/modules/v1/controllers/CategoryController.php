@@ -5,9 +5,6 @@ namespace api\modules\v1\controllers;
 use api\modules\v1\models\Category;
 use api\modules\v1\models\CategoryForm;
 use common\models\CorsAuthBehaviors;
-use common\models\User;
-use common\models\UserForm;
-use console\controllers\RbacController;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
@@ -99,7 +96,6 @@ class CategoryController extends ActiveController
             throw new ForbiddenHttpException("You don't have enough permission");
         }
         $model = new CategoryForm();
-        $category = new Category();
         if ($model->load(Yii::$app->request->getBodyParams(), '') && $model->validate()) {
             $model->updateCategory($id);
         } elseif (!$model->hasErrors()) {
