@@ -3,6 +3,7 @@
 namespace api\modules\v1\controllers;
 
 use api\modules\v1\models\Category;
+use api\modules\v1\models\Subcategory;
 use common\models\CorsAuthBehaviors;
 use Yii;
 use yii\data\ActiveDataProvider;
@@ -21,6 +22,7 @@ class ExpertController extends ActiveController
 
         $behaviors['authenticator']['only'] = [
             'index',
+            'subcategories'
         ];
         return $behaviors;
     }
@@ -42,6 +44,14 @@ class ExpertController extends ActiveController
         }
         return new ActiveDataProvider([
             'query' => Category::find()->where(['user_id' => Yii::$app->user->getId()]),
+            'pagination' => false
+        ]);
+    }
+
+    public function actionSubcategories($category_id)
+    {
+        return new ActiveDataProvider([
+            'query' => Subcategory::find()->where(['category_id' => $category_id]),
             'pagination' => false
         ]);
     }

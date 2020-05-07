@@ -68,6 +68,10 @@ return [
                 [
                     'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/expert'],
+                    'extraPatterns' => [
+                        'GET subcategories' => 'subcategories',
+                        'OPTIONS subcategories' => 'options',
+                    ],
                 ],
                 [
                     'class' => 'yii\rest\UrlRule',

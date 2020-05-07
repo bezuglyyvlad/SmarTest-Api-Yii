@@ -86,13 +86,6 @@ class Subcategory extends ActiveRecord
         return [];
     }
 
-    public function fields()
-    {
-        $fields = parent::fields();
-        unset($fields['is_open']);
-        return $fields;
-    }
-
     public function extraFields()
     {
         return ['test'];
