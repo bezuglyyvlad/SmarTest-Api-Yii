@@ -2,10 +2,13 @@
 
 namespace api\modules\v1\controllers;
 
+use api\modules\v1\models\Category;
 use api\modules\v1\models\Subcategory;
 use common\models\CorsAuthBehaviors;
+use Yii;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
+use yii\web\ForbiddenHttpException;
 
 class SubcategoryController extends ActiveController
 {
@@ -23,7 +26,7 @@ class SubcategoryController extends ActiveController
         $behaviors = CorsAuthBehaviors::getCorsAuthSettings($behaviors);
 
         $behaviors['authenticator']['only'] = [
-            'index',
+            'index', 'update', 'create', 'delete'
         ];
         return $behaviors;
     }
@@ -33,9 +36,23 @@ class SubcategoryController extends ActiveController
         $actions = parent::actions();
 
         // отключить действия
-        unset($actions['index']);
+        unset($actions['index'], $actions['view']);
 
         return $actions;
+    }
+
+    public function checkAccess($action, $model = null, $params = [])
+    {
+        if (in_array($action, ['update', 'delete']) &&
+            !Yii::$app->user->can('editOwnCategory',
+                ['category' => Category::findOne(['category_id' => $model->category_id])])) {
+            throw new ForbiddenHttpException("You don't have enough permission");
+        }
+        if (in_array($action, ['create']) &&
+            !Yii::$app->user->can('editOwnCategory',
+                ['category' => Category::findOne(['category_id' => Yii::$app->request->post()['category_id']])])) {
+            throw new ForbiddenHttpException("You don't have enough permission");
+        }
     }
 
     public function actionIndex($category_id)

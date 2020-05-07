@@ -40,8 +40,20 @@ class Subcategory extends ActiveRecord
             [['name', 'count_of_questions', 'category_id'], 'required'],
             [['time', 'count_of_questions', 'is_open', 'category_id'], 'integer'],
             [['name'], 'string', 'max' => 255],
+            ['name', 'unique', 'targetClass' => Subcategory::className(),
+                'targetAttribute' => ['name', 'category_id'], 'when' => [$this, 'whenSelfUnique'],
+                'message' => 'Тест з такою назвою вже існує в даній категорії.'],
             [['category_id'], 'exist', 'skipOnError' => true, 'targetClass' => Category::className(), 'targetAttribute' => ['category_id' => 'category_id']],
         ];
+    }
+
+    public function whenSelfUnique($model, $attribute)
+    {
+        $subcategory = Subcategory::findOne(['subcategory_id' => Yii::$app->request->get('id')]);
+        if ($subcategory) {
+            return $subcategory->$attribute !== $model->$attribute;
+        }
+        return true;
     }
 
     /**
