@@ -71,7 +71,14 @@ return [
                     'extraPatterns' => [
                         'GET subcategories' => 'subcategories',
                         'OPTIONS subcategories' => 'options',
+
+                        'GET questions' => 'questions',
+                        'OPTIONS questions' => 'options',
                     ],
+                ],
+                [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/question'],
                 ],
                 [
                     'class' => 'yii\rest\UrlRule',

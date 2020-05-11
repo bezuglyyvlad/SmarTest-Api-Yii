@@ -26,7 +26,7 @@ class SubcategoryController extends ActiveController
         $behaviors = CorsAuthBehaviors::getCorsAuthSettings($behaviors);
 
         $behaviors['authenticator']['only'] = [
-            'index', 'update', 'create', 'delete'
+            'index', 'view', 'update', 'create', 'delete'
         ];
         return $behaviors;
     }
@@ -36,7 +36,7 @@ class SubcategoryController extends ActiveController
         $actions = parent::actions();
 
         // отключить действия
-        unset($actions['index'], $actions['view']);
+        unset($actions['index']);
 
         return $actions;
     }

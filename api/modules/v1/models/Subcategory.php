@@ -38,7 +38,9 @@ class Subcategory extends ActiveRecord
     {
         return [
             [['name', 'count_of_questions', 'category_id'], 'required'],
-            [['time', 'count_of_questions', 'is_open', 'category_id'], 'integer'],
+            [['is_open', 'category_id'], 'integer'],
+            [['time'], 'integer', 'min' => 1, 'max' => 1440],
+            [['count_of_questions'], 'integer', 'min' => 5, 'max' => 500],
             [['name'], 'string', 'max' => 255],
             ['name', 'unique', 'targetClass' => Subcategory::className(),
                 'targetAttribute' => ['name', 'category_id'], 'when' => [$this, 'whenSelfUnique'],
@@ -64,8 +66,8 @@ class Subcategory extends ActiveRecord
         return [
             'subcategory_id' => 'Subcategory ID',
             'name' => 'Name',
-            'time' => 'Time',
-            'count_of_questions' => 'Count Of Question',
+            'time' => 'Час',
+            'count_of_questions' => 'Кількість запитань',
             'is_open' => 'Is Open',
             'category_id' => 'Category ID',
         ];
