@@ -11,11 +11,12 @@ use Yii;
  * @property string $text
  * @property int $lvl
  * @property int $type
- * @property string $description
+ * @property string|null $description
  * @property int $subcategory_id
  *
  * @property Answer[] $answers
  * @property Subcategory $subcategory
+ * @property TestQuestion[] $testQuestions
  */
 class Question extends \yii\db\ActiveRecord
 {
@@ -36,7 +37,7 @@ class Question extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['text', 'lvl', 'type', 'description', 'subcategory_id'], 'required'],
+            [['text', 'lvl', 'type', 'subcategory_id'], 'required'],
             [['text', 'description'], 'string'],
             [['lvl', 'type', 'subcategory_id'], 'integer'],
             [['subcategory_id'], 'exist', 'skipOnError' => true, 'targetClass' => Subcategory::className(), 'targetAttribute' => ['subcategory_id' => 'subcategory_id']],
@@ -72,5 +73,13 @@ class Question extends \yii\db\ActiveRecord
     public function getSubcategory()
     {
         return $this->hasOne(Subcategory::className(), ['subcategory_id' => 'subcategory_id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getTestQuestions()
+    {
+        return $this->hasMany(TestQuestion::className(), ['question_id' => 'question_id']);
     }
 }
