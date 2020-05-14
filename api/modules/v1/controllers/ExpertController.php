@@ -27,6 +27,7 @@ class ExpertController extends ActiveController
             'index',
             'subcategories',
             'questions',
+            'question'
         ];
         return $behaviors;
     }
@@ -51,7 +52,7 @@ class ExpertController extends ActiveController
                 ['category' => Category::findOne(['category_id' => $params['category_id']])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
-        if (in_array($action, ['questions']) &&
+        if (in_array($action, ['questions', 'createQuestion']) &&
             !Yii::$app->user->can('editOwnCategory',
                 ['category' => Category::findOne(['category_id' => $model->category_id])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
@@ -91,6 +92,8 @@ class ExpertController extends ActiveController
         $data = $data ? $data : Yii::$app->request->post();
         $question = new Question();
         if ($question->load($data, '') && $question->validate()) {
+            $subcategory = Subcategory::findOne(['subcategory_id' => $question->subcategory_id]);
+            $this->checkAccess('createQuestion', $subcategory);
             $answers = array_key_exists('answers', $data) ? $data['answers'] : null;
 
             //validate
