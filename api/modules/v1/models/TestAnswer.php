@@ -33,7 +33,8 @@ class TestAnswer extends \yii\db\ActiveRecord
         return [
             [['text', 'is_right', 'test_question_id'], 'required'],
             [['text'], 'string'],
-            [['is_right', 'is_user_answer', 'test_question_id'], 'integer'],
+            [['is_right', 'test_question_id'], 'integer'],
+            [['is_user_answer'], 'integer', 'min' => 0, 'max' => 1],
             [['test_question_id'], 'exist', 'skipOnError' => true, 'targetClass' => TestQuestion::className(), 'targetAttribute' => ['test_question_id' => 'test_question_id']],
         ];
     }

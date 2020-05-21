@@ -149,11 +149,12 @@ class TestController extends ActiveController
     {
         $test = Test::findOne(['test_id' => $test_id, 'user_id' => Yii::$app->user->getId()]);
         TestHelper::checkAccessForResult($test);
-        $questions = TestQuestion::find()->where(['test_id' => $test_id])->asArray()->all();
-        foreach ($questions as &$item) {
-            $item['answers'] = TestAnswer::findAll(['test_question_id' => $item['test_question_id']]);
+        $questions = TestQuestion::find()->where(['test_id' => $test_id])->all();
+        $answers = [];
+        foreach ($questions as $item) {
+            $answers[$item->test_question_id] = TestAnswer::findAll(['test_question_id' => $item->test_question_id]);
         }
-        return ['test' => $test, 'questions' => $questions];
+        return ['test' => $test, 'questions' => $questions, 'answers' => $answers];
     }
 
     public function actionCreate()

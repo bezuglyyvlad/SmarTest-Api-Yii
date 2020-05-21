@@ -74,11 +74,27 @@ return [
 
                         'GET questions' => 'questions',
                         'OPTIONS questions' => 'options',
+
+                        'POST question' => 'question',
+                        'OPTIONS question' => 'options',
+
+                        'POST upload' => 'upload',
+                        'OPTIONS upload' => 'options',
+
+                        'DELETE deleteImage' => 'delete-image',
+                        'OPTIONS deleteImage' => 'options',
+
+                        'POST import' => 'import',
+                        'OPTIONS import' => 'options',
                     ],
                 ],
                 [
                     'class' => 'yii\rest\UrlRule',
                     'controller' => ['v1/question'],
+                ],
+                [
+                    'class' => 'yii\rest\UrlRule',
+                    'controller' => ['v1/answer'],
                 ],
                 [
                     'class' => 'yii\rest\UrlRule',

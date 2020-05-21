@@ -6,12 +6,18 @@ use api\modules\v1\models\Answer;
 use api\modules\v1\models\Category;
 use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
+use api\modules\v1\models\TestQuestion;
 use common\models\CorsAuthBehaviors;
+use common\models\Upload;
+use common\models\UploadForm;
+use common\models\Utils;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 use yii\web\ForbiddenHttpException;
+use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
+use yii\web\UploadedFile;
 
 class ExpertController extends ActiveController
 {
@@ -27,7 +33,9 @@ class ExpertController extends ActiveController
             'index',
             'subcategories',
             'questions',
-            'question'
+            'question',
+            'upload',
+            'delete-image'
         ];
         return $behaviors;
     }
@@ -52,7 +60,7 @@ class ExpertController extends ActiveController
                 ['category' => Category::findOne(['category_id' => $params['category_id']])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
-        if (in_array($action, ['questions', 'createQuestion']) &&
+        if (in_array($action, ['questions', 'createQuestion', 'upload', 'deleteImage']) &&
             !Yii::$app->user->can('editOwnCategory',
                 ['category' => Category::findOne(['category_id' => $model->category_id])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
@@ -96,17 +104,6 @@ class ExpertController extends ActiveController
             $this->checkAccess('createQuestion', $subcategory);
             $answers = array_key_exists('answers', $data) ? $data['answers'] : null;
 
-            //validate
-            $countIsRight = 0;
-            foreach ($answers as $item) {
-                if ($item['is_right'] == 1) {
-                    $countIsRight++;
-                }
-            }
-            if (count($answers) < 2 || $countIsRight == 0) {
-                throw new ServerErrorHttpException('Incorrect answers.');
-            }
-
             $answerModels = [];
             foreach ($answers as $item) {
                 $model = new Answer();
@@ -119,7 +116,25 @@ class ExpertController extends ActiveController
                 }
             }
 
-            $question->save();
+            //validate
+            $countIsRight = 0;
+            foreach ($answers as $item) {
+                if ($item['is_right'] == 1) {
+                    $countIsRight++;
+                }
+            }
+            if (count($answers) < 2 || $countIsRight == 0) {
+                throw new ServerErrorHttpException('Incorrect answers.');
+            }
+
+            $uploadedFile = UploadedFile::getInstanceByName('image');
+            if ($uploadedFile) {
+                $model = $this->actionUpload(null, $question, $uploadedFile);
+                if ($model->hasErrors()) return $model;
+            } else {
+                $question->save();
+            }
+
             foreach ($answerModels as $answer) {
                 $answer['question_id'] = $question->question_id;
                 $answer->save();
@@ -132,6 +147,43 @@ class ExpertController extends ActiveController
         }
 
         return $question;
+    }
+
+    public function actionUpload($id, $model = null, $uploadedFile = null)
+    {
+        $model = $model ? $model : Question::findOne($id);
+        if (!$model) {
+            throw new NotFoundHttpException("Object not found: $id");
+        }
+        $subcategory = Subcategory::findOne(['subcategory_id' => $model->subcategory_id]);
+        $this->checkAccess('upload', $subcategory);
+        $uploadModel = new UploadForm();
+
+        $uploadModel->imageFile = $uploadedFile ? $uploadedFile : UploadedFile::getInstanceByName('image');
+        $uploadModel->newImageName = Yii::$app->security->generateRandomString(100);
+
+        if ($uploadModel->upload('question')) {
+            Upload::deleteOldImage($model->image, 'question');
+            $model->image = $uploadModel->newImageName . '.' . $uploadModel->imageFile->extension;
+            $model->save();
+            return $model;
+        }
+        return $uploadModel;
+    }
+
+    public function actionDeleteImage($id)
+    {
+        $model = Question::findOne($id);
+        if (!$model) {
+            throw new NotFoundHttpException("Object not found: $id");
+        }
+        $subcategory = Subcategory::findOne(['subcategory_id' => $model->subcategory_id]);
+        $this->checkAccess('deleteImage', $subcategory);
+
+        Upload::deleteOldImage($model->image, 'question');
+        $model->image = null;
+        $model->save();
+        return $model;
     }
 
     public function actionImport()

@@ -6,6 +6,7 @@ use api\modules\v1\controllers\TestController;
 use common\models\TestHelper;
 use Yii;
 use yii\db\ActiveRecord;
+use function foo\func;
 
 /**
  * This is the model class for table "subcategory".
@@ -37,8 +38,16 @@ class Subcategory extends ActiveRecord
     public function rules()
     {
         return [
-            [['name', 'count_of_questions', 'category_id'], 'required'],
-            [['is_open', 'category_id'], 'integer'],
+            [['name', 'count_of_questions', 'category_id', 'time', 'is_open'], 'required'],
+            [['category_id'], 'integer'],
+            [['is_open'], 'integer', 'min' => 0, 'max' => 1],
+            ['is_open', function($attribute, $params) {
+                $subcategory_id = $this->subcategory_id;
+                if ($this->is_open == 1 && !($subcategory_id && Question::find()->where(['subcategory_id' => $subcategory_id,
+                        'lvl' => range(1, Question::COUNT_OF_LVL)])->groupBy('lvl')->count() === '3')) {
+                    $this->addError($attribute,'Тест не може бути відкритий. Повинні бути присутні питання хоча би всіх складностей.');
+                }
+            }],
             [['time'], 'integer', 'min' => 1, 'max' => 1440],
             [['count_of_questions'], 'integer', 'min' => 5, 'max' => 500],
             [['name'], 'string', 'max' => 255],

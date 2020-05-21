@@ -32,7 +32,8 @@ class Answer extends \yii\db\ActiveRecord
         return [
             [['text', 'is_right', 'question_id'], 'required'],
             [['text'], 'string'],
-            [['is_right', 'question_id'], 'integer'],
+            [['question_id'], 'integer'],
+            [['is_right'], 'integer', 'min' => 0, 'max' => 1],
             [['question_id'], 'exist', 'skipOnError' => true, 'targetClass' => Question::className(), 'targetAttribute' => ['question_id' => 'question_id']],
         ];
     }

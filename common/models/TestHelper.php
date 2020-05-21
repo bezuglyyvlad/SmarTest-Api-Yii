@@ -60,6 +60,7 @@ class TestHelper
         $testQuestion->lvl = $question->lvl;
         $testQuestion->type = $question->type;
         $testQuestion->description = $question->description;
+        $testQuestion->image = $question->image;
         $testQuestion->question_id = $question->question_id;
         $testQuestion->number_question = $number_question;
         if ($testQuestion->save()) {
@@ -74,6 +75,7 @@ class TestHelper
             }
             return $testQuestion;
         }
+        return null;
     }
 
     public static function checkUserAnswer($answer, $userAnswer)

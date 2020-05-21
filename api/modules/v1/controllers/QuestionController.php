@@ -6,12 +6,15 @@ use api\modules\v1\models\Category;
 use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
 use common\models\CorsAuthBehaviors;
+use common\models\Upload;
+use common\models\UploadForm;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
+use yii\web\UploadedFile;
 
 class QuestionController extends ActiveController
 {
@@ -34,7 +37,7 @@ class QuestionController extends ActiveController
         $actions = parent::actions();
 
         // отключить действия
-        unset($actions['index'], $actions['update'], $actions['create']);
+        unset($actions['index'], $actions['create'], $actions['delete']);
 
         return $actions;
     }
@@ -58,15 +61,15 @@ class QuestionController extends ActiveController
         return $model;
     }
 
-    public function actionUpdate($id)
+    public function actionDelete($id)
     {
         $model = $this->myFindModel($id);
-        $this->checkAccess('update', $model);
-        if ($model->load(Yii::$app->getRequest()->getBodyParams(), '') && $model->validate()) {
-            $model->save();
-        } elseif (!$model->hasErrors()) {
-            throw new ServerErrorHttpException('Failed to update question.');
+        $this->checkAccess('delete', $model);
+
+        Upload::deleteOldImage($model->image, 'question');
+        if ($model->delete() === false) {
+            throw new ServerErrorHttpException('Failed to delete the object for unknown reason.');
         }
-        return $model;
+        Yii::$app->getResponse()->setStatusCode(204);
     }
 }

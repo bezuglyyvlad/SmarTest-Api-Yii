@@ -2,6 +2,7 @@
 
 namespace api\modules\v1\models;
 
+use common\models\Image;
 use Yii;
 
 /**
@@ -12,6 +13,7 @@ use Yii;
  * @property int $lvl
  * @property int $type
  * @property string|null $description
+ * @property string|null $image
  * @property int $number_question
  * @property int $right_answer
  * @property float $score
@@ -42,6 +44,7 @@ class TestQuestion extends \yii\db\ActiveRecord
             [['text', 'description'], 'string'],
             [['lvl', 'type', 'number_question', 'right_answer', 'test_id', 'question_id'], 'integer'],
             [['score'], 'number'],
+            [['image'], 'string', 'max' => 255],
             [['test_id'], 'exist', 'skipOnError' => true, 'targetClass' => Test::className(), 'targetAttribute' => ['test_id' => 'test_id'], 'filter' => ['user_id' => Yii::$app->user->getId()]],
             [['question_id'], 'exist', 'skipOnError' => true, 'targetClass' => Question::className(), 'targetAttribute' => ['question_id' => 'question_id']],
         ];
@@ -58,6 +61,7 @@ class TestQuestion extends \yii\db\ActiveRecord
             'lvl' => 'Lvl',
             'type' => 'Type',
             'description' => 'Description',
+            'image' => 'Image',
             'number_question' => 'Number Question',
             'right_answer' => 'Right Answer',
             'score' => 'Score',
@@ -90,8 +94,17 @@ class TestQuestion extends \yii\db\ActiveRecord
         return $this->hasOne(Question::className(), ['question_id' => 'question_id']);
     }
 
-    public function extraFields()
+    public function fields()
     {
-        return ['testAnswer'];
+        $fields = parent::fields();
+        $fields['image'] = function () {
+            return $this->image ? Image::getImage('question', $this->image) : $this->image;
+        };
+        return $fields;
     }
+
+//    public function extraFields()
+//    {
+//        return ['testAnswer'];
+//    }
 }
