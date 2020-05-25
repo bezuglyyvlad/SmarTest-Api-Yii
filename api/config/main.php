@@ -16,6 +16,8 @@ return [
             'class' => 'api\modules\v1\Module',
         ],
     ],
+    'language' => 'uk',
+    'sourceLanguage' => 'uk',
     'components' => [
         'request' => [
             'csrfParam' => '_csrf-api',
@@ -86,6 +88,9 @@ return [
 
                         'POST import' => 'import',
                         'OPTIONS import' => 'options',
+
+                        'GET export' => 'export',
+                        'OPTIONS export' => 'options',
                     ],
                 ],
                 [

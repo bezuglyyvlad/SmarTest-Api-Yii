@@ -8,6 +8,7 @@ use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
 use api\modules\v1\models\TestQuestion;
 use common\models\CorsAuthBehaviors;
+use common\models\ImportForm;
 use common\models\Upload;
 use common\models\UploadForm;
 use common\models\Utils;
@@ -18,6 +19,7 @@ use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
 use yii\web\UploadedFile;
+use function MongoDB\BSON\toJSON;
 
 class ExpertController extends ActiveController
 {
@@ -35,7 +37,9 @@ class ExpertController extends ActiveController
             'questions',
             'question',
             'upload',
-            'delete-image'
+            'delete-image',
+            'import',
+            'export'
         ];
         return $behaviors;
     }
@@ -60,7 +64,7 @@ class ExpertController extends ActiveController
                 ['category' => Category::findOne(['category_id' => $params['category_id']])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
-        if (in_array($action, ['questions', 'createQuestion', 'upload', 'deleteImage']) &&
+        if (in_array($action, ['questions', 'createQuestion', 'upload', 'deleteImage', 'import']) &&
             !Yii::$app->user->can('editOwnCategory',
                 ['category' => Category::findOne(['category_id' => $model->category_id])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
@@ -103,6 +107,7 @@ class ExpertController extends ActiveController
             $subcategory = Subcategory::findOne(['subcategory_id' => $question->subcategory_id]);
             $this->checkAccess('createQuestion', $subcategory);
             $answers = array_key_exists('answers', $data) ? $data['answers'] : null;
+            if (!$answers) throw new ServerErrorHttpException('Необхідно заповнити відповіді.');
 
             $answerModels = [];
             foreach ($answers as $item) {
@@ -110,13 +115,13 @@ class ExpertController extends ActiveController
                 if ($model->load($item, '') && $model->validate(['text', 'is_right'])) {
                     array_push($answerModels, $model);
                 } elseif (!$model->hasErrors()) {
-                    throw new ServerErrorHttpException('Failed to load answers.');
+                    throw new ServerErrorHttpException('Не вдалося завантажити відповіді.');
                 } else {
                     return $model;
                 }
             }
 
-            //validate
+            //validate count of right answers
             $countIsRight = 0;
             foreach ($answers as $item) {
                 if ($item['is_right'] == 1) {
@@ -124,7 +129,7 @@ class ExpertController extends ActiveController
                 }
             }
             if (count($answers) < 2 || $countIsRight == 0) {
-                throw new ServerErrorHttpException('Incorrect answers.');
+                throw new ServerErrorHttpException('Некоректні відповіді.');
             }
 
             $uploadedFile = UploadedFile::getInstanceByName('image');
@@ -143,7 +148,7 @@ class ExpertController extends ActiveController
             $response = Yii::$app->getResponse();
             $response->setStatusCode(201);
         } elseif (!$question->hasErrors()) {
-            throw new ServerErrorHttpException('Failed to create question.');
+            throw new ServerErrorHttpException('Не вдалося завантажити запитання.');
         }
 
         return $question;
@@ -188,6 +193,41 @@ class ExpertController extends ActiveController
 
     public function actionImport()
     {
-        return $this->actionQuestion([['question' => ['text' => 'temp']]]);
+        $uploadModel = new ImportForm();
+        $uploadModel->file = UploadedFile::getInstanceByName('import');
+        $uploadModel->subcategory_id = Yii::$app->request->post('subcategory_id');
+
+        if ($uploadModel->validate()) {
+            $subcategory = Subcategory::findOne(['subcategory_id' => $uploadModel->subcategory_id]);
+            $this->checkAccess('import', $subcategory);
+
+            $xmlString = file_get_contents($uploadModel->file->tempName);
+            $simpleXmlArray = simplexml_load_string($xmlString);
+            $json = json_encode($simpleXmlArray);
+            $data = json_decode($json, true);
+
+            if (array_key_exists('question', $data)) {
+                foreach ($data['question'] as $item) {
+                    $item['subcategory_id'] = $uploadModel->subcategory_id;
+                    $model = $this->actionQuestion($item);
+                    if ($model->hasErrors()) return $model;
+                }
+            } else {
+                throw new ServerErrorHttpException('Некоректно завантажені дані.');
+            }
+        } elseif (!$uploadModel->hasErrors()) {
+            throw new ServerErrorHttpException('Некоректно завантажені дані.');
+        }
+
+        return $uploadModel->hasErrors() ? $uploadModel : null;
+    }
+
+    public function actionExport()
+    {
+        $path = Yii::getAlias('@api') . "/web/images/question/HuNfichJHnqsSy826z-zCsiquDwUGIHZp6a-V9Sx2NKDQ_1hG28B1vLzCWh6Nq2WY5t2-E4XogPvjwuJL9-26gTQIv2M4Ty3vz-E.png";
+        if (file_exists($path)) {
+            return (Yii::$app->response->xSendFile($path));
+        }
+        return 'ERROR';
     }
 }
