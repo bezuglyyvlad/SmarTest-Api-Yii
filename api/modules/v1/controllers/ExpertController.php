@@ -6,20 +6,20 @@ use api\modules\v1\models\Answer;
 use api\modules\v1\models\Category;
 use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
-use api\modules\v1\models\TestQuestion;
 use common\models\CorsAuthBehaviors;
 use common\models\ImportForm;
 use common\models\Upload;
 use common\models\UploadForm;
 use common\models\Utils;
+use SimpleXMLElement;
 use Yii;
 use yii\data\ActiveDataProvider;
+use yii\db\Exception;
 use yii\rest\ActiveController;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\ServerErrorHttpException;
 use yii\web\UploadedFile;
-use function MongoDB\BSON\toJSON;
 
 class ExpertController extends ActiveController
 {
@@ -64,7 +64,7 @@ class ExpertController extends ActiveController
                 ['category' => Category::findOne(['category_id' => $params['category_id']])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
-        if (in_array($action, ['questions', 'createQuestion', 'upload', 'deleteImage', 'import']) &&
+        if (in_array($action, ['questions', 'createQuestion', 'upload', 'deleteImage', 'import', 'export']) &&
             !Yii::$app->user->can('editOwnCategory',
                 ['category' => Category::findOne(['category_id' => $model->category_id])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
@@ -202,7 +202,15 @@ class ExpertController extends ActiveController
             $this->checkAccess('import', $subcategory);
 
             $xmlString = file_get_contents($uploadModel->file->tempName);
-            $simpleXmlArray = simplexml_load_string($xmlString);
+            try {
+                $simpleXmlArray = simplexml_load_string($xmlString);
+            } catch (\Exception $e) {
+                throw new ServerErrorHttpException('Помилка парсингу файла.');
+            }
+            if (!stripos($simpleXmlArray->asXML(), 'encoding="utf-8"')) {
+                throw new ServerErrorHttpException('Вкажіть кодування utf-8.');
+            }
+
             $json = json_encode($simpleXmlArray);
             $data = json_decode($json, true);
 
@@ -222,12 +230,29 @@ class ExpertController extends ActiveController
         return $uploadModel->hasErrors() ? $uploadModel : null;
     }
 
-    public function actionExport()
+    public function actionExport($id)
     {
-        $path = Yii::getAlias('@api') . "/web/images/question/HuNfichJHnqsSy826z-zCsiquDwUGIHZp6a-V9Sx2NKDQ_1hG28B1vLzCWh6Nq2WY5t2-E4XogPvjwuJL9-26gTQIv2M4Ty3vz-E.png";
-        if (file_exists($path)) {
-            return (Yii::$app->response->xSendFile($path));
+        $subcategory = Subcategory::findOne(['subcategory_id' => $id]);
+        if (!$subcategory) {
+            throw new NotFoundHttpException("Object not found: $id");
         }
-        return 'ERROR';
+        $this->checkAccess('export', $subcategory);
+        $data = Question::find()->select(['question_id', 'text', 'lvl', 'type', 'description'])
+            ->with('answers')->where(['subcategory_id' => $id])->asArray()->all();
+
+        if (!count($data)) throw new ForbiddenHttpException("You don't have enough permission");
+
+        $xml = new SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><root/>');
+        Utils::array_to_xml(['question' => $data], $xml, ['question_id', 'answer_id']);
+
+        $tempFile = tempnam(sys_get_temp_dir(), '');
+        rename($tempFile, $tempFile .= '.xml');
+        file_put_contents($tempFile, $xml->asXML());
+
+        if (file_exists($tempFile)) {
+            return Yii::$app->response->sendFile($tempFile);
+        } else {
+            throw new ServerErrorHttpException('Не вдалося зробити експорт.');
+        }
     }
 }
