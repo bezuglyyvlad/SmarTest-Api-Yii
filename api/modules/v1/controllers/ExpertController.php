@@ -215,10 +215,16 @@ class ExpertController extends ActiveController
             $data = json_decode($json, true);
 
             if (array_key_exists('question', $data)) {
-                foreach ($data['question'] as $item) {
-                    $item['subcategory_id'] = $uploadModel->subcategory_id;
-                    $model = $this->actionQuestion($item);
+                if (is_array($data['question'])) {
+                    $data['question']['subcategory_id'] = $uploadModel->subcategory_id;
+                    $model = $this->actionQuestion($data['question']);
                     if ($model->hasErrors()) return $model;
+                } else {
+                    foreach ($data['question'] as $item) {
+                        $item['subcategory_id'] = $uploadModel->subcategory_id;
+                        $model = $this->actionQuestion($item);
+                        if ($model->hasErrors()) return $model;
+                    }
                 }
             } else {
                 throw new ServerErrorHttpException('Некоректно завантажені дані.');

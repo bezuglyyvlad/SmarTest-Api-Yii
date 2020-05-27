@@ -14,7 +14,7 @@ class Utils
     public static function array_to_xml($data, &$xml_data, $itemsToExept)
     {
         foreach ($data as $key => $value) {
-            if (in_array($key, $itemsToExept) || !$value) continue;
+            if (in_array($key, $itemsToExept) || $value === null) continue;
             if (is_array($value)) {
                 foreach ($value as $arrayElem) {
                     $subnode = $xml_data->addChild($key);
