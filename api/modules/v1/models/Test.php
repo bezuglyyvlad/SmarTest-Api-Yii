@@ -101,4 +101,9 @@ class Test extends \yii\db\ActiveRecord
         unset($fields['user_id']);
         return $fields;
     }
+
+    public function extraFields()
+    {
+        return ['user'];
+    }
 }

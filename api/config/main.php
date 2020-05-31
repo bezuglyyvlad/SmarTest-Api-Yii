@@ -91,6 +91,9 @@ return [
 
                         'GET export' => 'export',
                         'OPTIONS export' => 'options',
+
+                        'GET testStatistics' => 'test-statistics',
+                        'OPTIONS testStatistics' => 'options',
                     ],
                 ],
                 [

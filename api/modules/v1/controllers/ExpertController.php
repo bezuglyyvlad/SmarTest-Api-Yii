@@ -6,6 +6,7 @@ use api\modules\v1\models\Answer;
 use api\modules\v1\models\Category;
 use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
+use api\modules\v1\models\Test;
 use common\models\CorsAuthBehaviors;
 use common\models\ImportForm;
 use common\models\Upload;
@@ -39,7 +40,8 @@ class ExpertController extends ActiveController
             'upload',
             'delete-image',
             'import',
-            'export'
+            'export',
+            'test-statistics'
         ];
         return $behaviors;
     }
@@ -64,7 +66,8 @@ class ExpertController extends ActiveController
                 ['category' => Category::findOne(['category_id' => $params['category_id']])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
         }
-        if (in_array($action, ['questions', 'createQuestion', 'upload', 'deleteImage', 'import', 'export']) &&
+        if (in_array($action, ['questions', 'createQuestion', 'upload', 'deleteImage',
+                'import', 'export', 'testStatistics']) &&
             !Yii::$app->user->can('editOwnCategory',
                 ['category' => Category::findOne(['category_id' => $model->category_id])])) {
             throw new ForbiddenHttpException("You don't have enough permission");
@@ -246,7 +249,7 @@ class ExpertController extends ActiveController
         $data = Question::find()->select(['question_id', 'text', 'lvl', 'type', 'description'])
             ->with('answers')->where(['subcategory_id' => $id])->asArray()->all();
 
-        if (!count($data)) throw new ForbiddenHttpException("You don't have enough permission");
+        if (!count($data)) throw new NotFoundHttpException("Data not found.");
 
         $xml = new SimpleXMLElement('<?xml version="1.0" encoding="utf-8"?><root/>');
         Utils::array_to_xml(['question' => $data], $xml, ['question_id', 'answer_id']);
@@ -260,5 +263,15 @@ class ExpertController extends ActiveController
         } else {
             throw new ServerErrorHttpException('Не вдалося зробити експорт.');
         }
+    }
+
+    public function actionTestStatistics($id)
+    {
+        $subcategory = Subcategory::findOne(['subcategory_id' => $id]);
+        if (!$subcategory) {
+            throw new NotFoundHttpException("Object not found: $id");
+        }
+        $this->checkAccess('testStatistics', $subcategory);
+        return Test::find()->where(['subcategory_id' => $id])->orderBy(['test_id' => SORT_DESC])->all();
     }
 }
