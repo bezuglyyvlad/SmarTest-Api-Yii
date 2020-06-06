@@ -8,14 +8,13 @@ use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
 use api\modules\v1\models\Test;
 use common\models\CorsAuthBehaviors;
+use common\models\Image;
 use common\models\ImportForm;
-use common\models\Upload;
 use common\models\UploadForm;
 use common\models\Utils;
 use SimpleXMLElement;
 use Yii;
 use yii\data\ActiveDataProvider;
-use yii\db\Exception;
 use yii\rest\ActiveController;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
@@ -50,7 +49,7 @@ class ExpertController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
+        // off actions
         unset($actions['index'], $actions['view'], $actions['update'], $actions['create'], $actions['delete']);
 
         return $actions;
@@ -171,7 +170,7 @@ class ExpertController extends ActiveController
         $uploadModel->newImageName = Yii::$app->security->generateRandomString(100);
 
         if ($uploadModel->upload('question')) {
-            Upload::deleteOldImage($model->image, 'question');
+            Image::deleteOldImage($model->image, 'question');
             $model->image = $uploadModel->newImageName . '.' . $uploadModel->imageFile->extension;
             $model->save();
             return $model;
@@ -188,7 +187,7 @@ class ExpertController extends ActiveController
         $subcategory = Subcategory::findOne(['subcategory_id' => $model->subcategory_id]);
         $this->checkAccess('deleteImage', $subcategory);
 
-        Upload::deleteOldImage($model->image, 'question');
+        Image::deleteOldImage($model->image, 'question');
         $model->image = null;
         $model->save();
         return $model;

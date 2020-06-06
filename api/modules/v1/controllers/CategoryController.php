@@ -5,6 +5,7 @@ namespace api\modules\v1\controllers;
 use api\modules\v1\models\Category;
 use api\modules\v1\models\CategoryForm;
 use common\models\CorsAuthBehaviors;
+use console\controllers\RbacController;
 use Yii;
 use yii\data\ActiveDataProvider;
 use yii\rest\ActiveController;
@@ -37,8 +38,8 @@ class CategoryController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
-        unset($actions['index'], $actions['view'], $actions['update'], $actions['create']);
+        // off actions
+        unset($actions['index'], $actions['view'], $actions['update'], $actions['create'], $actions['delete']);
 
         return $actions;
     }
@@ -52,9 +53,11 @@ class CategoryController extends ActiveController
 
     public function myFindModel($id)
     {
-        if (!Category::findOne($id)) {
+        $model = Category::findOne($id);
+        if (!$model) {
             throw new NotFoundHttpException("Object not found: $id");
         }
+        return $model;
     }
 
     public function actionIndex()
@@ -102,5 +105,18 @@ class CategoryController extends ActiveController
             throw new ServerErrorHttpException('Failed to update category.');
         }
         return $model;
+    }
+
+    public function actionDelete($id)
+    {
+        $model = $this->myFindModel($id);
+        $this->checkAccess('delete');
+        $oldUserId = $model->user_id;
+        if ($model->delete() === false) {
+            throw new ServerErrorHttpException('Failed to delete the object for unknown reason.');
+        }
+        RbacController::actionRemoveExpert($oldUserId);
+
+        Yii::$app->getResponse()->setStatusCode(204);
     }
 }

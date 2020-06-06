@@ -33,7 +33,7 @@ class AnswerController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
+        // off actions
         unset($actions['index'], $actions['view']);
 
         return $actions;

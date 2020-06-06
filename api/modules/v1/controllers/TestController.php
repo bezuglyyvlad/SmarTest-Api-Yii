@@ -45,7 +45,7 @@ class TestController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
+        // off actions
         unset($actions['create'], $actions['view'], $actions['index'], $actions['update'], $actions['delete']);
 
         return $actions;
@@ -109,28 +109,29 @@ class TestController extends ActiveController
     public function actionNextQuestion()
     {
         $testQuestion = new TestQuestion();
-        if ($testQuestion->load(Yii::$app->request->post(), '') && $testQuestion->validate('test_id')) {
+        if ($testQuestion->load(Yii::$app->request->post(), '')
+            && $testQuestion->validate('test_id')) {
             $test_id = $testQuestion->test_id;
             $post = Yii::$app->request->post();
             $userAnswer = array_key_exists('answer', $post) ? $post['answer'] : null;
             $test = Test::findOne(['test_id' => $test_id, 'user_id' => Yii::$app->user->getId()]);
-            $lastQuestion = TestQuestion::find()->where(['test_id' => $test_id])->orderBy(['number_question' => SORT_DESC])
-                ->one();
+            $lastQuestion = TestQuestion::find()->where(['test_id' => $test_id])
+                ->orderBy(['number_question' => SORT_DESC])->one();
             TestHelper::checkAccessForQuestion($test, $userAnswer, $lastQuestion->type);
             $answers = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id]);
             TestHelper::saveUserAnswer($answers, $userAnswer, $lastQuestion->type);
             TestHelper::updateTestStatistics($test, $answers, $lastQuestion);
             $numberNextQuestion = $lastQuestion->number_question + 1;
-            //если требуеться не выходящий за пределы вопрос
+            //if need question
             if ($numberNextQuestion <= $test->count_of_questions) {
-                //подбираем новый вопрос по нужному алгоритму (проверка был ли такой вопрос уже в тесте)
-                //подбор сложности нового вопроса
+                //select lvl new question
                 $newLvl = 1;
                 if ($test->score >= 64 && $test->score < 82) {
                     $newLvl = 2;
                 } else if ($test->score >= 82) {
                     $newLvl = 3;
                 }
+                //generate new question (check already exists such a question)
                 $question = TestHelper::generateNewQuestion($newLvl, $test->subcategory_id, $test_id);
                 $testQuestion = TestHelper::saveQuestion($testQuestion, $question, $numberNextQuestion);
                 unset($testQuestion->description);
@@ -178,9 +179,10 @@ class TestController extends ActiveController
                 $question = TestHelper::createFirstQuestion($model->test_id, $model->subcategory_id);
                 $answers = TestAnswer::find()->select('text')->where(['test_question_id' => $question->test_question_id])->all();
             }
+            return ['test' => $model, 'question' => $question, 'answers' => $answers];
         } elseif (!$model->hasErrors()) {
             throw new ServerErrorHttpException('Failed to start new test.');
         }
-        return ['test' => $model, 'question' => $question, 'answers' => $answers];
+        return $model;
     }
 }

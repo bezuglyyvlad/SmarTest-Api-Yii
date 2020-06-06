@@ -6,6 +6,7 @@ use api\modules\v1\models\Category;
 use api\modules\v1\models\Question;
 use api\modules\v1\models\Subcategory;
 use common\models\CorsAuthBehaviors;
+use common\models\Image;
 use common\models\Upload;
 use common\models\UploadForm;
 use Yii;
@@ -36,7 +37,7 @@ class QuestionController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
+        // off actions
         unset($actions['index'], $actions['create'], $actions['delete']);
 
         return $actions;
@@ -66,7 +67,7 @@ class QuestionController extends ActiveController
         $model = $this->myFindModel($id);
         $this->checkAccess('delete', $model);
 
-        Upload::deleteOldImage($model->image, 'question');
+        Image::deleteOldImage($model->image, 'question');
         if ($model->delete() === false) {
             throw new ServerErrorHttpException('Failed to delete the object for unknown reason.');
         }

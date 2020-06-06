@@ -32,21 +32,20 @@ class TestHelper
         $currentDate = new DateTime();
         $dateFinish = DateTime::createFromFormat($dateFormat, $testModel->date_finish);
         $timeIsOver = $dateFinish <= $currentDate;
-        $lastQuestion = TestQuestion::find()->where(['test_id' => $testModel->test_id])->orderBy(['number_question' => SORT_DESC])
-            ->one();
+        $lastQuestion = TestQuestion::find()->where(['test_id' => $testModel->test_id])
+            ->orderBy(['number_question' => SORT_DESC])->one();
         if ($lastQuestion) {
             $isRealLastQuestion = $testModel->count_of_questions == $lastQuestion->number_question;
             $last_answer = TestAnswer::findAll(['test_question_id' => $lastQuestion->test_question_id,
                 'is_user_answer' => !null]);
         };
-        // если время вышло или есть ответ на последний вопрос (действительно последний)
+        // if time is over or answer exists on real last question
         return $timeIsOver || $lastQuestion && $isRealLastQuestion && $last_answer;
     }
 
     public static function checkAccessForView($id)
     {
         $test = Test::findOne(['test_id' => $id, 'user_id' => Yii::$app->user->getId()]);
-        //если теста нет
         if (!$test) throw new NotFoundHttpException();
         $testIsFinished = self::testIsFinished($test);
         if ($testIsFinished) {
@@ -182,7 +181,7 @@ class TestHelper
         $testIsFinished = $test ? self::testIsFinished($test) : false;
         $enoughQuestions = Question::find()->where(['subcategory_id' => $subcategory_id,
                 'lvl' => range(1, Question::COUNT_OF_LVL)])->groupBy('lvl')->count() === '3';
-        //тест есть и он не закончен и вопросов недостаточно (не все сложности) для теста
+        //test exists and not finished or not enough questions
         if ($test && !$testIsFinished || !$enoughQuestions) {
             throw new ForbiddenHttpException();
         }

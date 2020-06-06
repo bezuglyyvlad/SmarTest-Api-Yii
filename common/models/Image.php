@@ -17,4 +17,12 @@ class Image
         $height = $imageSize['1'];
         return Url::base(true) . "/images/{$className}/{$image}?w={$width}&h={$height}";
     }
+
+    public static function deleteOldImage($className, $image)
+    {
+        $filePath = Yii::getAlias("@api") . '/web/images/' . $className . '/' . $image;
+        if ($image != '' && file_exists($filePath)) {
+            unlink($filePath);
+        }
+    }
 }

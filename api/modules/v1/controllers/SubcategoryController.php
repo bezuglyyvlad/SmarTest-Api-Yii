@@ -35,7 +35,7 @@ class SubcategoryController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
+        // off actions
         unset($actions['index']);
 
         return $actions;

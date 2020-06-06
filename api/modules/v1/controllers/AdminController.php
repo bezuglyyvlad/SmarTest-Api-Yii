@@ -29,7 +29,7 @@ class AdminController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
+        // off actions
         unset($actions['index'], $actions['view'], $actions['update'], $actions['create'], $actions['delete']);
 
         return $actions;

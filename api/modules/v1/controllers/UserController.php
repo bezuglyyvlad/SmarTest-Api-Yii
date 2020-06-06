@@ -39,7 +39,7 @@ class UserController extends ActiveController
     {
         $actions = parent::actions();
 
-        // отключить действия
+        // off actions
         unset($actions['create'], $actions['index'], $actions['update'], $actions['view']);
 
         return $actions;
