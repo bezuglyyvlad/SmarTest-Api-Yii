@@ -170,7 +170,7 @@ class ExpertController extends ActiveController
         $uploadModel->newImageName = Yii::$app->security->generateRandomString(100);
 
         if ($uploadModel->upload('question')) {
-            Image::deleteOldImage($model->image, 'question');
+            Image::deleteOldImage('question', $model->image);
             $model->image = $uploadModel->newImageName . '.' . $uploadModel->imageFile->extension;
             $model->save();
             return $model;
@@ -187,7 +187,7 @@ class ExpertController extends ActiveController
         $subcategory = Subcategory::findOne(['subcategory_id' => $model->subcategory_id]);
         $this->checkAccess('deleteImage', $subcategory);
 
-        Image::deleteOldImage($model->image, 'question');
+        Image::deleteOldImage('question', $model->image);
         $model->image = null;
         $model->save();
         return $model;
@@ -204,6 +204,8 @@ class ExpertController extends ActiveController
             $this->checkAccess('import', $subcategory);
 
             $xmlString = file_get_contents($uploadModel->file->tempName);
+            $xmlString = str_replace(["\n", "\r", "\t"], '', $xmlString);
+            $xmlString = trim(str_replace('"', "'", $xmlString));
             try {
                 $simpleXmlArray = simplexml_load_string($xmlString);
             } catch (\Exception $e) {
@@ -217,15 +219,29 @@ class ExpertController extends ActiveController
             $data = json_decode($json, true);
 
             if (array_key_exists('question', $data)) {
-                if (is_array($data['question'])) {
+                if (!is_array(array_values($data['question'])[0])) {
                     $data['question']['subcategory_id'] = $uploadModel->subcategory_id;
                     $model = $this->actionQuestion($data['question']);
                     if ($model->hasErrors()) return $model;
                 } else {
-                    foreach ($data['question'] as $item) {
-                        $item['subcategory_id'] = $uploadModel->subcategory_id;
-                        $model = $this->actionQuestion($item);
-                        if ($model->hasErrors()) return $model;
+                    $transactionQuestion = Question::getDb()->beginTransaction();
+                    $transactionAnswer = Answer::getDb()->beginTransaction();
+                    try {
+                        foreach ($data['question'] as $item) {
+                            $item['subcategory_id'] = $uploadModel->subcategory_id;
+                            $model = $this->actionQuestion($item);
+                            if ($model->hasErrors()) return $model;
+                        }
+                        $transactionQuestion->commit();
+                        $transactionAnswer->commit();
+                    } catch (\Exception $e) {
+                        $transactionQuestion->rollBack();
+                        $transactionAnswer->rollBack();
+                        throw $e;
+                    } catch (\Throwable $e) {
+                        $transactionQuestion->rollBack();
+                        $transactionAnswer->rollBack();
+                        throw $e;
                     }
                 }
             } else {

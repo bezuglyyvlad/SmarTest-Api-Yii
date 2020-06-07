@@ -67,7 +67,7 @@ class QuestionController extends ActiveController
         $model = $this->myFindModel($id);
         $this->checkAccess('delete', $model);
 
-        Image::deleteOldImage($model->image, 'question');
+        Image::deleteOldImage('question', $model->image);
         if ($model->delete() === false) {
             throw new ServerErrorHttpException('Failed to delete the object for unknown reason.');
         }
