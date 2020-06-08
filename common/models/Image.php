@@ -15,7 +15,7 @@ class Image
         $imageSize = getimagesize($imagePath);
         $width = $imageSize['0'];
         $height = $imageSize['1'];
-        return Url::base(true) . "/images/{$className}/{$image}?w={$width}&h={$height}";
+        return Url::base(true) . "/web/images/{$className}/{$image}?w={$width}&h={$height}";
     }
 
     public static function deleteOldImage($className, $image)

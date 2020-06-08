@@ -5,11 +5,12 @@
 <IfModule mod_rewrite.c>
     # если /api, то в api
     RewriteCond %{REQUEST_URI} ^/(api)
+    RewriteRule ^api/images/(.*)$ api/web/images/$1 [L]
     RewriteRule ^api/assets/(.*)$ api/web/assets/$1 [L]
     RewriteRule ^api/css/(.*)$ api/web/css/$1 [L]
 #    RewriteRule ^api/js/(.*)$ api/web/js/$1 [L]
 #    RewriteRule ^api/libs/(.*)$ api/web/libs/$1 [L]
-    RewriteRule ^api/images/(.*)$ api/web/images/$1 [L]
+#    RewriteRule ^api/images/(.*)$ api/web/images/$1 [L]
 #    RewriteRule ^api/plugins/(.*)$ api/web/plugins/$1 [L]
     RewriteCond %{REQUEST_URI} !^/api/web/(assets|js|css|js)/
     RewriteCond %{REQUEST_URI} ^/(api)
